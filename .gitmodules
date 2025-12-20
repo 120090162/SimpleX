@@ -1,0 +1,7 @@
+[submodule "third_party/pinocchio"]
+	path = third_party/pinocchio
+	url = https://github.com/120090162/pinocchio.git
+	branch = pin4
+[submodule "cmake"]
+	path = cmake
+	url = https://github.com/jrl-umi3218/jrl-cmakemodules.git
