@@ -1,7 +1,3 @@
-//
-// Copyright (c) 2022-2024 INRIA
-//
-
 #ifndef __simple_simulator_txx__
 #define __simple_simulator_txx__
 
