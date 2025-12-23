@@ -2,18 +2,18 @@
 #define __simplex_fwd_hpp__
 
 #ifdef _WIN32
-#include <windows.h>
-#undef far
-#undef near
+    #include <windows.h>
+    #undef far
+    #undef near
 #endif
 
 #include <cassert>
 
 #ifdef SIMPLEX_EIGEN_CHECK_MALLOC
-#ifndef EIGEN_RUNTIME_NO_MALLOC
-#define EIGEN_RUNTIME_NO_MALLOC_WAS_NOT_DEFINED
-#define EIGEN_RUNTIME_NO_MALLOC
-#endif
+    #ifndef EIGEN_RUNTIME_NO_MALLOC
+        #define EIGEN_RUNTIME_NO_MALLOC_WAS_NOT_DEFINED
+        #define EIGEN_RUNTIME_NO_MALLOC
+    #endif
 #endif
 
 #include "simplex/deprecated.hpp"
@@ -26,7 +26,7 @@
 #include <Eigen/SparseCholesky>
 
 #ifdef SIMPLEX_WITH_ACCELERATE_SUPPORT
-#include <Eigen/AccelerateSupport>
+    #include <Eigen/AccelerateSupport>
 #endif
 
 #include <pinocchio/multibody/model.hpp>
@@ -36,7 +36,7 @@ namespace simplex
     ///
     /// \brief Common traits structure to fully define base classes for CRTP.
     ///
-    template <typename C>
+    template<typename C>
     struct traits
     {
     };

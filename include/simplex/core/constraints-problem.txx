@@ -6,7 +6,7 @@
 namespace simplex
 {
 
-	extern template struct ConstraintsProblemTpl<context::Scalar, context::Options, ::pinocchio::JointCollectionDefaultTpl>;
+    extern template struct ConstraintsProblemTpl<context::Scalar, context::Options, ::pinocchio::JointCollectionDefaultTpl>;
 
 } // namespace simplex
 
