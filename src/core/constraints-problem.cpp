@@ -1,12 +1,8 @@
-//
-// Copyright (c) 2022-2024 INRIA
-//
+#include "simplex/core/constraints-problem.hpp"
 
-#include "simple/core/constraints-problem.hpp"
-
-namespace simple
+namespace simplex
 {
 
-  template struct ConstraintsProblemTpl<context::Scalar, context::Options, ::pinocchio::JointCollectionDefaultTpl>;
+	template struct ConstraintsProblemTpl<context::Scalar, context::Options, ::pinocchio::JointCollectionDefaultTpl>;
 
-} // namespace simple
+} // namespace simplex

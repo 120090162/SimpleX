@@ -1,0 +1,6 @@
+add_simplex_unit_test(mujoco-humanoid)
+add_simplex_unit_test(simulation-combine-constraints)
+add_simplex_unit_test(simulation-robots)
+add_simplex_unit_test(simulator-minimal)
+add_simplex_unit_test(simulator)
+add_simplex_unit_test(urdf-romeo)

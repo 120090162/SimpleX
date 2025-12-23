@@ -12,6 +12,32 @@ set(SIMPLEX_PROJECT_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
 # Disable -Werror on Unix for now.
 set(CXX_DISABLE_WERROR True)
 set(CMAKE_VERBOSE_MAKEFILE True)
+# Export compile commands for clang-tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Allow us to find resources (e.g. urdfs/xmls) in the build directory.
+add_compile_definitions(SIMPLEX_TEST_DIR="${CMAKE_SOURCE_DIR}")
+
+# ref to https://github.com/xizhibei/blog/issues/145
+# 使用ccache提高编译速度
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    message(STATUS "Set up ccache ...")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+else()
+	message(STATUS "ccache not found.")
+endif()
+
+# 开启 Interprocedural optimization
+include(CheckIPOSupported)
+check_ipo_supported(RESULT _IsIPOSupported)
+if(_IsIPOSupported)
+    message(STATUS "Turn on INTERPROCEDURAL_OPTIMIZATION")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+	message(STATUS "Turn off INTERPROCEDURAL_OPTIMIZATION.")
+endif()
 
 # ----------------------------------------------------
 # --- OPTIONS  ---------------------------------------
@@ -88,6 +114,7 @@ endif()
 # Force C++ standard to be C++14 at least
 check_minimal_cxx_standard(14 ENFORCE)
 
+option(BUILD_TEST_CASES "Build the simulator tests" OFF)
 option(BUILD_PYTHON_INTERFACE "Build the Python bindings" ON)
 option(GENERATE_PYTHON_STUBS "Generate the Python stubs associated to the Python library" OFF)
 option(BUILD_WITH_COMMIT_VERSION "Build libraries by setting specific commit version" OFF)
@@ -231,7 +258,7 @@ if(BUILD_WITH_ACCELERATE_SUPPORT)
 	# We don't export yet as there might be an issue on AMR64 platforms.
 	find_package(Accelerate REQUIRED)
 	message(STATUS "Build with Accelerate support framework.")
-	add_definitions(-DPINOCCHIO_WITH_ACCELERATE_SUPPORT -DSIMPLE_WITH_ACCELERATE_SUPPORT)
+	add_definitions(-DPINOCCHIO_WITH_ACCELERATE_SUPPORT -DSIMPLEX_WITH_ACCELERATE_SUPPORT)
 endif(BUILD_WITH_ACCELERATE_SUPPORT)
 
 # ----------------------------------------------------
@@ -265,8 +292,9 @@ endif()
 # --- UNIT TESTS -------------------------------------
 # ----------------------------------------------------
 # test data
-# config_files(tests/test_data/config.h)
-# add_subdirectory(tests)
+if(BUILD_TEST_CASES)
+	add_subdirectory(tests)
+endif(BUILD_TEST_CASES)
 
 # Export for PkgConfig
 pkg_config_append_libs(${PROJECT_NAME})

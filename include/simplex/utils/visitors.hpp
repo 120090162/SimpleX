@@ -33,7 +33,7 @@ namespace simplex
 			ReturnType operator()(const boost::blank &) const
 			{
 				PINOCCHIO_THROW_PRETTY(std::invalid_argument,
-									   "Simplex Error: Attempted to visit an empty boost::blank variant.");
+									   "SimpleX Error: Attempted to visit an empty boost::blank variant.");
 				return ::pinocchio::visitors::internal::NoRun<ReturnType>::run();
 			}
 		};

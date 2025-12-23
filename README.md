@@ -5,7 +5,7 @@
 conda create -n simplex python=3.10 -c conda-forge -y
 conda activate simplex
 conda install -c conda-forge compilers cmake make git pkg-config -y
-conda install -c conda-forge eigen boost urdfdom hpp-fcl console_bridge -y
+conda install -c conda-forge eigen boost urdfdom hpp-fcl console_bridge -y # auto install coal
 conda install -c conda-forge eigenpy numpy -y
 
 # 安装特定版本的pinocchio
@@ -41,6 +41,19 @@ cmake .. \
 
 make -j4
 make install
+
+# [optinal] boost test
+conda install -c conda-forge fmt
+cmake .. \
+    -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
+    -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_PYTHON_INTERFACE=OFF \
+    -DBUILD_TEST_CASES=ON \
+    -DPYTHON_EXECUTABLE=$(which python)
+
+make -j4
+ctest
 ```
 
 # 测试例子
