@@ -32,6 +32,34 @@ else(SIMPLEX_USE_DIFFCOAL)
                                 INTERFACE SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS)
 endif(SIMPLEX_USE_DIFFCOAL)
 
+# Enable Clarabel constraint solver
+if(SIMPLE_USE_CLARABEL)
+  if(TARGET clarabel::clarabel)
+    target_link_libraries(${PROJECT_NAME}_header_only INTERFACE clarabel::clarabel)
+  elseif(TARGET PkgConfig::clarabel)
+    target_link_libraries(${PROJECT_NAME}_header_only INTERFACE PkgConfig::clarabel)
+  else()
+    # Fallback: Try to find the library directly in the conda environment
+    find_library(
+      CLARABEL_LIBRARY
+      NAMES clarabel_c
+      PATHS ${CMAKE_INSTALL_PREFIX}/lib ENV LD_LIBRARY_PATH)
+    if(CLARABEL_LIBRARY)
+      message(STATUS "Found Clarabel library at: ${CLARABEL_LIBRARY}")
+      target_link_libraries(${PROJECT_NAME}_header_only INTERFACE ${CLARABEL_LIBRARY})
+    else()
+      message(WARNING "Clarabel library not found. Please install Clarabel.cpp")
+    endif()
+  endif()
+endif(SIMPLE_USE_CLARABEL)
+
+# Enable introspection of private/protected members and methods Can be useful for core developpers
+# when trying to debug stuff
+if(SIMPLE_ENABLE_PRIVATE_INTROSPECTION)
+  target_compile_definitions(${PROJECT_NAME}_header_only
+                             INTERFACE SIMPLE_ENABLE_PRIVATE_INTROSPECTION)
+endif()
+
 # Enable tracy profiling
 if(SIMPLEX_TRACY_ENABLE)
     modernize_target_link_libraries(

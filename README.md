@@ -30,7 +30,7 @@ cd ../../../
 
 conda install -c conda-forge glfw glew mesalib -y
 conda install -c conda-forge spdlog fmt -y
-conda install -c conda-forge pybind11 -y
+conda install -c conda-forge pybind11 clarabel -y
 mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
