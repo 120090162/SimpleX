@@ -10,11 +10,13 @@ set(${PROJECT_NAME}_CORE_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/simplex/core/contact-frame.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem.hxx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/diff-solver.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/math/fwd.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/math/qr.hpp
-    ${PROJECT_SOURCE_DIR}/include/simplex/fwd.hpp)
+    ${PROJECT_SOURCE_DIR}/include/simplex/fwd.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/macros.hpp)
 
 set(_binary_headers_root ${${PROJECT_NAME}_BINARY_DIR}/include/simplex)
 set(${PROJECT_NAME}_CORE_GENERATED_PUBLIC_HEADERS

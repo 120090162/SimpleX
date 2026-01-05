@@ -3,6 +3,7 @@
 
 #include "simplex/core/fwd.hpp"
 #include "simplex/core/constraints-problem.hpp"
+#include "simplex/macros.hpp"
 
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
@@ -99,7 +100,7 @@ namespace simplex
         using ConstraintModel = typename ConstraintsProblem::ConstraintModel;
         using ConstraintData = typename ConstraintsProblem::ConstraintData;
 
-    protected:
+        SIMPLEX_PROTECTED
         /// \brief Handle to the model of the system.
         ModelHandle m_model;
 
@@ -112,7 +113,7 @@ namespace simplex
         /// \brief Handle to the geometry model's data of the system.
         GeometryDataHandle m_geom_data;
 
-    public:
+        SIMPLEX_PUBLIC
         // --- Simulator State Variables ---
         /// \brief Joints configuration of the system - copied from `step` input
         VectorXs q;
@@ -300,7 +301,7 @@ namespace simplex
         {
         }
 
-    protected:
+        SIMPLEX_PROTECTED
         /// \brief Broad phase manager
         // TODO: template by broad phase type (no broad phase, dynamic aabb tree, SAP etc)
         BroadPhaseManagerHandle m_broad_phase_manager;
@@ -333,7 +334,7 @@ namespace simplex
         /// \brief Timings for collision detection.
         coal::CPUTimes m_collision_detection_timings;
 
-    public:
+        SIMPLEX_PUBLIC
         // --- Constructors ---
         /// \brief Constructor specifying the Data and GeometryData associated to the model and geom_model.
         SimulatorTpl(
@@ -506,7 +507,7 @@ namespace simplex
             return this->m_constraints_problem;
         }
 
-    protected:
+        SIMPLEX_PROTECTED
         /// \brief Allocates memory based on `model` and active collision pairs in `geom_model`.
         void allocate();
 
@@ -558,7 +559,7 @@ namespace simplex
 
             static void run(Simulator & simulator, Scalar dt);
 
-        protected:
+            SIMPLEX_PROTECTED
             static void setup(Simulator & simulator);
         };
 
@@ -583,7 +584,7 @@ namespace simplex
 
             static void run(Simulator & simulator, Scalar dt);
 
-        protected:
+            SIMPLEX_PROTECTED
             static void setup(Simulator & simulator);
         };
     } // namespace details

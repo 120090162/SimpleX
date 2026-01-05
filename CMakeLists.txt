@@ -119,6 +119,9 @@ option(BUILD_PYTHON_INTERFACE "Build the Python bindings" ON)
 option(GENERATE_PYTHON_STUBS "Generate the Python stubs associated to the Python library" OFF)
 option(BUILD_WITH_COMMIT_VERSION "Build libraries by setting specific commit version" OFF)
 option(SIMPLEX_USE_DIFFCOAL "Use diffcoal to compute collision detection derivatives" OFF)
+option(SIMPLEX_ENABLE_PRIVATE_INTROSPECTION
+       "Turns off private/protected members and methods in classes, to allow for easier debugging"
+       OFF)
 
 option(BUILD_WITH_OPENMP_SUPPORT "Build the library with the OpenMP support" OFF)
 if(APPLE)

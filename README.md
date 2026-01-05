@@ -4,7 +4,7 @@
 ```bash
 conda create -n simplex python=3.10 -c conda-forge -y
 conda activate simplex
-conda install -c conda-forge compilers cmake make git pkg-config -y
+conda install -c conda-forge gcc_linux-64=11 gxx_linux-64=11 cmake make git pkg-config -y
 conda install -c conda-forge eigen boost urdfdom hpp-fcl console_bridge -y # auto install coal
 conda install -c conda-forge eigenpy numpy -y
 

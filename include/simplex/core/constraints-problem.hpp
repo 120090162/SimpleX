@@ -3,6 +3,7 @@
 
 #include "simplex/core/fwd.hpp"
 #include "simplex/core/contact-frame.hpp"
+#include "simplex/macros.hpp"
 
 #include <pinocchio/algorithm/delassus-operator-base.hpp>
 #include <pinocchio/algorithm/contact-info.hpp>
@@ -100,7 +101,7 @@ namespace simplex
         /// ----------------------------------
         /// General attributes
 
-    public:
+        SIMPLEX_PUBLIC
         /// \brief Cholesky decomposition of the constraints problem.
         ConstraintCholeskyDecomposition constraint_cholesky_decomposition;
 
@@ -115,7 +116,7 @@ namespace simplex
         /// CCP = Convex Complementarity Problem
         bool is_ncp{true};
 
-    protected:
+        SIMPLEX_PROTECTED
         /// \brief Handle to the model of the system.
         ModelHandle m_model;
 
@@ -152,7 +153,7 @@ namespace simplex
         /// ----------------------------------
         /// Joints dry frictions constraint
 
-    public:
+        SIMPLEX_PUBLIC
         /// \brief Frictional joint constraint model.
         ConstraintModel joint_friction_constraint_model;
 
@@ -253,7 +254,7 @@ namespace simplex
         /// \brief indexes of sliding contacts
         std::vector<ContactIndex> sliding_contacts;
 
-    protected:
+        SIMPLEX_PROTECTED
         /// \brief Maximum number of contact points per collision pair.
         ContactIndex m_max_num_contact_per_collision_pair;
 
@@ -275,7 +276,7 @@ namespace simplex
         /////////////////////////////////////////////////
         /// METHODS
         /////////////////////////////////////////////////
-    public:
+        SIMPLEX_PUBLIC
         /// ----------------------------------
         /// Constructors
 
@@ -505,7 +506,7 @@ namespace simplex
             return this->m_constraints_velocities_warmstarts.head(this->constraints_problem_size());
         }
 
-    protected:
+        SIMPLEX_PROTECTED
         /// \brief Updates m_current_constraints_pb_id.
         void updateConstraintsHolders();
 
@@ -519,7 +520,7 @@ namespace simplex
         void computeConstraintsDrift(
             const Eigen::MatrixBase<FreeVelocityVectorType> & vfree, const Eigen::MatrixBase<VelocityVectorType> & v, const Scalar dt);
 
-    public:
+        SIMPLEX_PUBLIC
         /// ----------------------------------
         /// Joints dry frictions constraints
 

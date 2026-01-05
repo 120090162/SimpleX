@@ -2,6 +2,7 @@
 #define __simplex_core_contact_frame_hpp__
 
 #include "simplex/core/fwd.hpp"
+#include "simplex/macros.hpp"
 
 #include <pinocchio/spatial/se3.hpp>
 #include <pinocchio/multibody/geometry-object.hpp>
@@ -49,7 +50,7 @@ namespace simplex
             const Eigen::MatrixBase<Matrix6x3Type2> & dM_dposition // [output]
         );
 
-    protected:
+        SIMPLEX_PROTECTED
         /// \brief Given a normal, returns the associated non-coliear reference vector.
         /// This vector is then used to compute the rotation part of the placement.
         template<typename Vector3>
@@ -130,7 +131,7 @@ namespace simplex
             return *go2_ptr;
         }
 
-    protected:
+        SIMPLEX_PROTECTED
         const GeometryObject * go1_ptr;
         const GeometryObject * go2_ptr;
     };
