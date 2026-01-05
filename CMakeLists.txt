@@ -174,6 +174,29 @@ add_project_dependency(Boost REQUIRED COMPONENTS ${BOOST_REQUIRED_COMPONENTS})
 # -- pinocchio
 add_project_dependency(pinocchio REQUIRED PKG_CONFIG_REQUIRES "pinocchio >= 2.9.2")
 
+# -- clarabel (optional)
+if(SIMPLEX_USE_CLARABEL)
+	message(STATUS "Building with Clarabel constraint solver support")
+	find_package(clarabel QUIET)
+	if(NOT clarabel_FOUND)
+		message(STATUS "Clarabel not found via find_package, trying pkg-config")
+		find_package(PkgConfig QUIET)
+		if(PKG_CONFIG_FOUND)
+		pkg_check_modules(clarabel QUIET IMPORTED_TARGET clarabel)
+		endif()
+	endif()
+
+	if(clarabel_FOUND OR TARGET PkgConfig::clarabel)
+		message(STATUS "Clarabel found and will be linked")
+		add_definitions(-DSIMPLE_WITH_CLARABEL_SUPPORT)
+	else()
+		message(
+		WARNING
+			"Clarabel support requested but library not found. Please install Clarabel.cpp or set SIMPLEX_USE_CLARABEL=OFF"
+		)
+	endif()
+endif(SIMPLEX_USE_CLARABEL)
+
 # -- tracy (optional)
 if(SIMPLEX_TRACY_ENABLE AND SIMPLEX_DOWNLOAD_TRACY)
 	# We use FetchContent_Populate because we need EXCLUDE_FROM_ALL to avoid installing Tracy with
@@ -278,6 +301,8 @@ if(ENABLE_TEMPLATE_INSTANTIATION)
 	list(APPEND ${PROJECT_NAME}_CORE_SOURCES ${${PROJECT_NAME}_TEMPLATE_INSTANTIATION_SOURCES})
 	list(APPEND ${PROJECT_NAME}_CORE_PUBLIC_HEADERS
 		${${PROJECT_NAME}_TEMPLATE_INSTANTIATION_PUBLIC_HEADERS})
+	list(APPEND ${PROJECT_NAME}_HEADERS ${${PROJECT_NAME}_TEMPLATE_INSTANTIATION_PUBLIC_HEADERS})
+	list(APPEND ${PROJECT_NAME}_HEADERS ${${PROJECT_NAME}_PINOCCHIO_TEMPLATE_INSTANTIATION_HEADERS})
 endif()
 
 if(BUILD_PYTHON_INTERFACE)
@@ -303,3 +328,4 @@ endif(BUILD_TEST_CASES)
 # Export for PkgConfig
 pkg_config_append_libs(${PROJECT_NAME})
 pkg_config_append_boost_libs(${BOOST_COMPONENTS})
+setup_project_finalize()

@@ -25,12 +25,26 @@ cmake .. \
 make -j4
 make install
 
+# 安装Clarabel库
+cd ../../Clarabel
+
+conda install -c conda-forge rust rust-cbindgen -y
+cargo --version # show version >= 1.92.0
+# add 'export PATH=$PATH:$HOME/.cargo/bin' to ~/.bashrc or ~/.zshrc
+mkdir build && cd build
+cmake .. \
+    -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
+    -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
+    -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+make install
+
 # 安装simplex库
 cd ../../../
 
 conda install -c conda-forge glfw glew mesalib -y
 conda install -c conda-forge spdlog fmt -y
-conda install -c conda-forge pybind11 clarabel -y
+conda install -c conda-forge pybind11 -y
 mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \

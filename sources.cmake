@@ -4,7 +4,6 @@
 set(${PROJECT_NAME}_CORE_SOURCES empty.cpp)
 
 set(${PROJECT_NAME}_CORE_PUBLIC_HEADERS
-    ${PROJECT_SOURCE_DIR}/include/simplex/utils/visitors.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/fwd.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/contact-frame.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/contact-frame.hxx
@@ -15,6 +14,9 @@ set(${PROJECT_NAME}_CORE_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/math/fwd.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/math/qr.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/solver/clarabel-solver.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/solver/clarabel-solver.hxx
+    ${PROJECT_SOURCE_DIR}/include/simplex/utils/visitors.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/fwd.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/macros.hpp)
 
