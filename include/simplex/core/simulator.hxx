@@ -181,6 +181,7 @@ namespace simplex
         // Broad phase setup
         for (::pinocchio::GeometryObject & geom : this->geom_model().geometryObjects)
         {
+            // precompute local AABB
             geom.geometry->computeLocalAABB();
         }
 

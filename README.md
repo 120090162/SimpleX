@@ -8,8 +8,8 @@ conda install -c conda-forge compilers cmake make git pkg-config -y
 conda install -c conda-forge eigen boost urdfdom hpp-fcl console_bridge -y # auto install coal
 conda install -c conda-forge eigenpy numpy -y
 
-# 安装特定版本的pinocchio
 git clone --recursive https://github.com/120090162/SimpleX.git
+# 安装特定版本的pinocchio
 cd SimpleX/third_party/pinocchio
 
 mkdir build && cd build
