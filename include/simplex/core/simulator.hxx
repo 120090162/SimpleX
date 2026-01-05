@@ -155,12 +155,12 @@ namespace simplex
         SIMPLEX_TRACY_ZONE_SCOPED_N("Simulator::allocate");
 
         this->constraints_problem().allocate();
-        //
+        // input
         this->q.resize(this->model().nq);
         this->v.resize(this->model().nv);
         this->tau.resize(this->model().nv);
         this->fext.resize(static_cast<std::size_t>(model().njoints), Force::Zero());
-        //
+        // output
         this->qnew.resize(this->model().nq);
         this->vfree.resize(this->model().nv);
         this->vnew.resize(this->model().nv);

@@ -43,7 +43,7 @@ make -j4
 make install
 
 # [optinal] boost test
-conda install -c conda-forge fmt
+conda install -c conda-forge fmt -y
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
     -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
