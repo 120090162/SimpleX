@@ -7,4 +7,4 @@
 	url = https://github.com/jrl-umi3218/jrl-cmakemodules.git
 [submodule "third_party/Clarabel"]
 	path = third_party/Clarabel
-	url = https://github.com/oxfordcontrol/Clarabel.cpp.git
+	url = https://github.com/120090162/Clarabel.cpp.git

@@ -51,6 +51,7 @@ endfunction()
 
 # CPP test
 add_subdirectory(forward)
+add_subdirectory(solver)
 # add_subdirectory(resources)
 
 # Python tests

@@ -1,0 +1,1 @@
+add_simplex_unit_test(callback_with_state)

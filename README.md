@@ -28,7 +28,7 @@ make install
 # 安装Clarabel库
 cd ../../Clarabel
 
-conda install -c conda-forge rust rust-cbindgen -y
+conda install -c conda-forge rust -y
 cargo --version # show version >= 1.92.0
 # add 'export PATH=$PATH:$HOME/.cargo/bin' to ~/.bashrc or ~/.zshrc
 mkdir build && cd build

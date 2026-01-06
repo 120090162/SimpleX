@@ -16,6 +16,7 @@ set(${PROJECT_NAME}_CORE_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/simplex/math/qr.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/solver/clarabel-solver.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/solver/clarabel-solver.hxx
+    ${PROJECT_SOURCE_DIR}/include/simplex/utils/logger.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/utils/visitors.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/fwd.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/macros.hpp)
