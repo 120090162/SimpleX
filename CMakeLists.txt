@@ -188,7 +188,7 @@ if(SIMPLEX_USE_CLARABEL)
 
 	if(clarabel_FOUND OR TARGET PkgConfig::clarabel)
 		message(STATUS "Clarabel found and will be linked")
-		add_definitions(-DSIMPLE_WITH_CLARABEL_SUPPORT)
+		add_definitions(-DSIMPLEX_WITH_CLARABEL_SUPPORT)
 	else()
 		message(
 		WARNING

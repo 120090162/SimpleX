@@ -25,7 +25,7 @@ namespace simplex
         };
 
         using SE3 = ::pinocchio::SE3Tpl<Scalar, Options>;
-        using Matrix6x3s = Eigen::Matrix<Scalar, 6, 3, Options>;
+        using Matrix63s = Eigen::Matrix<Scalar, 6, 3, Options>;
         using Vector3s = Eigen::Matrix<Scalar, 3, 1, Options>;
 
         /// \brief Computes a placement M from a normal and position.

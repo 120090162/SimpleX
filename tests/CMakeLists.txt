@@ -50,6 +50,7 @@ function(ADD_SIMPLEX_UNIT_TEST name)
 endfunction()
 
 # CPP test
+add_subdirectory(derivatives)
 add_subdirectory(forward)
 add_subdirectory(solver)
 # add_subdirectory(resources)

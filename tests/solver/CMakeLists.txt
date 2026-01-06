@@ -1,1 +1,1 @@
-add_simplex_unit_test(callback_with_state)
+add_simplex_unit_test(clarabel_solve_callback)
