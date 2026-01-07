@@ -4,12 +4,17 @@
 set(${PROJECT_NAME}_CORE_SOURCES empty.cpp)
 
 set(${PROJECT_NAME}_CORE_PUBLIC_HEADERS
-    ${PROJECT_SOURCE_DIR}/include/simplex/core/fwd.hpp
-    ${PROJECT_SOURCE_DIR}/include/simplex/core/contact-frame.hpp
-    ${PROJECT_SOURCE_DIR}/include/simplex/core/contact-frame.hxx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem-derivatives.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem-derivatives.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem.hxx
-    ${PROJECT_SOURCE_DIR}/include/simplex/core/diff-solver.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/contact-frame.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/contact-frame.hxx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/fwd.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/ncp-derivatives.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/ncp-derivatives.hxx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-derivatives.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-derivatives.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/math/fwd.hpp
@@ -29,10 +34,13 @@ set(${PROJECT_NAME}_CORE_GENERATED_PUBLIC_HEADERS
 
 # --- Template instantiation ---
 set(${PROJECT_NAME}_TEMPLATE_INSTANTIATION_PUBLIC_HEADERS
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem-derivatives.txx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem.txx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/ncp-derivatives.txx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-derivatives.txx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.txx)
 
-set(${PROJECT_NAME}_TEMPLATE_INSTANTIATION_SOURCES core/constraints-problem.cpp core/simulator.cpp)
+set(${PROJECT_NAME}_TEMPLATE_INSTANTIATION_SOURCES core/constraints-problem-derivatives.cpp core/constraints-problem.cpp core/ncp-derivatives.cpp core/simulator-derivatives.cpp core/simulator.cpp)
 
 # --- Pinocchio template instantiation ---
 set(${PROJECT_NAME}_PINOCCHIO_TEMPLATE_INSTANTIATION_SOURCES

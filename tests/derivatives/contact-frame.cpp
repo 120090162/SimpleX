@@ -27,9 +27,9 @@ BOOST_AUTO_TEST_CASE(contact_frame_derivative)
     const Vector3d position = Vector3d::Random();
     ::pinocchio::SE3 M;
     PlacementFromNormalAndPosition::calc(normal, position, M);
-    using Matrix63 = PlacementFromNormalAndPosition::Matrix63s;
-    Matrix63 dM_dn;
-    Matrix63 dM_dp;
+    using Matrix63 = typename PlacementFromNormalAndPosition::Matrix63s;
+    Matrix63 dM_dn = Matrix63::Zero();
+    Matrix63 dM_dp = Matrix63::Zero();
     PlacementFromNormalAndPosition::calcDiff(M, dM_dn, dM_dp);
 
     // Check dM_dn

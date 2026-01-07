@@ -24,7 +24,7 @@ void addFloorToGeomModel(GeometryModel & geom_model)
 {
     using CollisionGeometryPtr = GeometryObject::CollisionGeometryPtr;
 
-    CollisionGeometryPtr floor_collision_shape = CollisionGeometryPtr(new hpp::fcl::Halfspace(0.0, 0.0, 1.0, 0.0));
+    CollisionGeometryPtr floor_collision_shape = CollisionGeometryPtr(new coal::Halfspace(0.0, 0.0, 1.0, 0.0));
 
     const SE3 M = SE3::Identity();
     GeometryObject floor("floor", 0, 0, M, floor_collision_shape);
@@ -63,10 +63,10 @@ void addSystemCollisionPairs(const Model & model, GeometryModel & geom_model, co
                 const SE3 M1 = geom_data.oMg[i];
                 const SE3 M2 = geom_data.oMg[j];
 
-                hpp::fcl::CollisionRequest colreq;
+                coal::CollisionRequest colreq;
                 colreq.security_margin = 1e-2; // 1cm of clearance
-                hpp::fcl::CollisionResult colres;
-                hpp::fcl::collide(
+                coal::CollisionResult colres;
+                coal::collide(
                     gobj_i.geometry.get(), ::pinocchio::toFclTransform3f(M1), //
                     gobj_j.geometry.get(), ::pinocchio::toFclTransform3f(M2), //
                     colreq, colres);

@@ -26,7 +26,8 @@ namespace simplex
         const GeometryModelHandle & geom_model_handle,
         const GeometryDataHandle & geom_data_handle,
         const BilateralPointConstraintModelVector & bilateral_point_constraint_models,
-        const WeldConstraintModelVector & weld_constraint_models)
+        const WeldConstraintModelVector & weld_constraint_models,
+        bool do_allocate)
     : m_model(model_handle)
     , m_data(data_handle)
     , m_geom_model(geom_model_handle)
@@ -47,7 +48,11 @@ namespace simplex
             this->weld_constraint_models.emplace_back(weld_constraint_models[i]);
             this->weld_constraint_datas.emplace_back(weld_constraint_models[i].createData());
         }
-        this->allocate();
+        if (do_allocate)
+        {
+            // Initial allocation
+            this->allocate();
+        }
     }
 
     // --------------------------------------------------------------------------
@@ -591,7 +596,7 @@ namespace simplex
         const Eigen::MatrixBase<FreeVelocityVectorType> & vfree,
         const Eigen::MatrixBase<VelocityVectorType> & v,
         const Eigen::MatrixBase<VelocityWarmStartVectorType> & v_warmstart,
-        S dt)
+        Scalar dt)
     {
         SIMPLEX_TRACY_ZONE_SCOPED_N("ConstraintsProblem::build");
         PINOCCHIO_UNUSED_VARIABLE(v_warmstart);
@@ -630,8 +635,7 @@ namespace simplex
     void ConstraintsProblemTpl<S, O, JointCollectionTpl>::computeConstraintsDrift(
         const Eigen::MatrixBase<FreeVelocityVectorType> & vfree, const Eigen::MatrixBase<VelocityVectorType> & v, const Scalar dt)
     {
-        // TODO: express everything in velocity and use pinocchio helper to go to formulation level
-
+        // We express everything in velocity.
         int cindex = 0;
         for (std::size_t i = 0; i < this->constraint_models.size(); ++i)
         {
@@ -640,7 +644,6 @@ namespace simplex
             const int cdim = cmodel.activeSize();
             auto gc = this->g().segment(cindex, cdim);
 
-            using MapVectorXs = Eigen::Map<VectorXs>;
             auto drift_visitor = ::simplex::visitors::make_lambda_visitor(
                 //
                 // Visitor for FrictionalJointConstraintModel - velocity formulation
@@ -649,7 +652,7 @@ namespace simplex
                     cmodel.jacobianMatrixProduct(this->model(), this->data(), cdata_, vfree, gc);
                 },
                 //
-                // Visitor for BilateralConstraintModel - velocity formulation
+                // Visitor for BilateralConstraintModel - velocity formulation <-> PointAnchor
                 [&](const BilateralPointConstraintModel & cmodel) {
                     const BilateralPointConstraintData & cdata_ = boost::get<const BilateralPointConstraintData>(cdata);
                     const Scalar kp = cmodel.baumgarte_corrector_parameters().Kp;
@@ -665,7 +668,7 @@ namespace simplex
                     gc += correction / dt;
                 },
                 //
-                // Visitor for WeldConstraintModel - velocity formulation
+                // Visitor for WeldConstraintModel - velocity formulation <-> FrameAnchor
                 [&](const WeldConstraintModel & cmodel) {
                     const WeldConstraintData & cdata_ = boost::get<const WeldConstraintData>(cdata);
                     const Scalar kp = cmodel.baumgarte_corrector_parameters().Kp;
@@ -696,19 +699,24 @@ namespace simplex
                     MapVectorXs joint_limit_correction(PINOCCHIO_EIGEN_MAP_ALLOCA(Scalar, cmodel.activeSize(), 1));
                     joint_limit_correction = cdata_.constraint_residual; // copy
 
-                    const auto lower_bound_size = cmodel.set().getNegativeOrthant().size();
-                    auto joint_limit_correction_lower = joint_limit_correction.head(lower_bound_size);
-                    joint_limit_correction_lower = (joint_limit_correction_lower.array() > 0)		  // if
-													   .select(										  //
-														   joint_limit_correction_lower.array() * kp, // then
-														   joint_limit_correction_lower.array());	  // else
+                    // const auto lower_bound_size = cmodel.set().getNegativeOrthant().size();
+                    // auto joint_limit_correction_lower = joint_limit_correction.head(lower_bound_size);
+                    // joint_limit_correction_lower = (joint_limit_correction_lower.array() > 0)		  // if
+                    // 								   .select(										  //
+                    // 									   joint_limit_correction_lower.array() * kp, // then
+                    // 									   joint_limit_correction_lower.array());	  // else
 
-                    const auto upper_bound_size = cmodel.set().getPositiveOrthant().size();
-                    auto joint_limit_correction_upper = joint_limit_correction.tail(upper_bound_size);
-                    joint_limit_correction_upper = (joint_limit_correction_upper.array() < 0)		  // if
-													   .select(										  //
-														   joint_limit_correction_upper.array() * kp, // then
-														   joint_limit_correction_upper.array());	  // else
+                    // const auto upper_bound_size = cmodel.set().getPositiveOrthant().size();
+                    // auto joint_limit_correction_upper = joint_limit_correction.tail(upper_bound_size);
+                    // joint_limit_correction_upper = (joint_limit_correction_upper.array() < 0)		  // if
+                    // 								   .select(										  //
+                    // 									   joint_limit_correction_upper.array() * kp, // then
+                    // 									   joint_limit_correction_upper.array());	  // else
+
+                    joint_limit_correction = (joint_limit_correction.array() < 0)     // if
+                                     .select(                               //
+                                       joint_limit_correction.array() * kp, // then
+                                       joint_limit_correction.array());     // else
 
                     gc += joint_limit_correction;
                 },
@@ -810,7 +818,6 @@ namespace simplex
     template<typename S, int O, template<typename, int> class JointCollectionTpl>
     bool ConstraintsProblemTpl<S, O, JointCollectionTpl>::check() const
     {
-        const auto problem_size = static_cast<Eigen::Index>(this->constraints_problem_size());
         assert(this->m_model != nullptr && "The model handle points to nullptr.");
         assert(this->m_data != nullptr && "The data handle points to nullptr.");
         assert(this->m_geom_model != nullptr && "The geometry model handle points to nullptr.");
@@ -820,8 +827,10 @@ namespace simplex
                                             + this->getNumberOfWeldConstraints()        //
                                             + this->getNumberOfJointLimitConstraints()  //
                                             + this->getNumberOfContacts();
+        PINOCCHIO_UNUSED_VARIABLE(num_constraints);
         assert(this->constraint_models.size() == num_constraints);
         assert(this->constraint_datas.size() == num_constraints);
+        const auto problem_size = static_cast<Eigen::Index>(this->constraints_problem_size());
         assert(
             (this->m_g.size() == this->m_constraints_velocities_warmstarts.size()) //
             && "g and constraint should always have the same (maximum) size.");
@@ -836,18 +845,7 @@ namespace simplex
             && "The constraints model and data vectors are not consistent with the geom_model and the "
                "geom_data.");
 
-        return static_cast<bool>(
-            this->m_model != nullptr                                                                              //
-            && this->m_data != nullptr                                                                            //
-            && this->m_geom_model != nullptr                                                                      //
-            && this->m_geom_data != nullptr                                                                       //
-            && this->constraint_models.size() == num_constraints                                                  //
-            && this->constraint_datas.size() == num_constraints                                                   //
-            && this->m_g.size() == this->m_constraints_velocities_warmstarts.size()                               //
-            && this->m_g.size() >= problem_size                                                                   //
-            && this->g().size() == problem_size                                                                   //
-            && this->frictional_point_constraints_warmstart().size() == this->frictional_point_constraints_size() //
-            && this->checkConstraintsConsistencyWithGeometryModel());
+        return true;
     }
 
 } // namespace simplex

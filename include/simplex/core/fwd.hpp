@@ -20,16 +20,28 @@ namespace simplex
     // --- Forward Declarations of Template Classes ---
 
     /**
+     * @brief Core structure representing the constrained dynamics problem with derivatives.
+     */
+    template<typename Scalar, int Options, template<typename, int> class JointCollectionTpl = ::pinocchio::JointCollectionDefaultTpl>
+    struct ConstraintsProblemDerivativesTpl;
+
+    /**
      * @brief Core structure representing the constrained dynamics problem.
      */
     template<typename Scalar, int Options, template<typename, int> class JointCollectionTpl = ::pinocchio::JointCollectionDefaultTpl>
     struct ConstraintsProblemTpl;
 
     /**
-     * @brief Main simulator class for forward dynamics and integration.
+     * @brief Main simple simulator class for forward dynamics and integration.
      */
     template<typename Scalar, int Options, template<typename, int> class JointCollectionTpl = ::pinocchio::JointCollectionDefaultTpl>
     struct SimulatorTpl;
+
+    /**
+     * @brief Main simplex simulator class for forward dynamics and integration.
+     */
+    template<typename Scalar, int Options, template<typename, int> class JointCollectionTpl = ::pinocchio::JointCollectionDefaultTpl>
+    struct SimulatorXTpl;
 
     /**
      * @brief Container for derivatives of the contact solver (Jacobians of the LCP/MCP).
@@ -51,11 +63,17 @@ namespace simplex
 
     // --- Default Typedefs (using the global context) ---
 
+    /** @brief Default ConstraintsProblemDerivatives using context types. */
+    typedef ConstraintsProblemDerivativesTpl<context::Scalar, context::Options> ConstraintsProblemDerivatives;
+
     /** @brief Default ConstraintsProblem using context types. */
     typedef ConstraintsProblemTpl<context::Scalar, context::Options> ConstraintsProblem;
 
     /** @brief Default Simulator using context types. */
     typedef SimulatorTpl<context::Scalar, context::Options> Simulator;
+
+    /** @brief Default Simulator using context types. */
+    typedef SimulatorXTpl<context::Scalar, context::Options> SimulatorX;
 
     /** @brief Default ContactSolverDerivatives using context types. */
     typedef ContactSolverDerivativesTpl<context::Scalar, context::Options> ContactSolverDerivatives;

@@ -1,5 +1,5 @@
-#ifndef __simplex_simulator_txx__
-#define __simplex_simulator_txx__
+#ifndef __simplex_core_simulator_txx__
+#define __simplex_core_simulator_txx__
 
 #include "simplex/core/simulator.hpp"
 
@@ -45,4 +45,4 @@ namespace simplex
 
 } // namespace simplex
 
-#endif // __simplex_simulator_txx__
+#endif // __simplex_core_simulator_txx__

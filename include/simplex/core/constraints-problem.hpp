@@ -11,6 +11,7 @@
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/multibody/geometry.hpp>
+#include <pinocchio/alloca.hpp>
 
 namespace simplex
 {
@@ -48,6 +49,7 @@ namespace simplex
         using MapVectorXs = Eigen::Map<VectorXs>;
         using MapVector3s = Eigen::Map<Vector3s>;
         using MapVector6s = Eigen::Map<Vector6s>;
+
         using ContactIndex = std::size_t;
 
         using Model = ::pinocchio::ModelTpl<Scalar, Options, JointCollectionTpl>;
@@ -58,25 +60,25 @@ namespace simplex
         using GeometryDataHandle = std::shared_ptr<::pinocchio::GeometryData>;
 
         using ConstraintModel = ::pinocchio::ConstraintModelTpl<Scalar, Options>;
-        using ConstraintModelVector = PINOCCHIO_STD_VECTOR_WITH_EIGEN_ALLOCATOR(ConstraintModel);
+        using ConstraintModelVector = PINOCCHIO_ALIGNED_STD_VECTOR(ConstraintModel);
         using WrappedConstraintModel = std::reference_wrapper<const ConstraintModel>;
-        using WrappedConstraintModelVector = std::vector<WrappedConstraintModel>;
+        using WrappedConstraintModelVector = PINOCCHIO_ALIGNED_STD_VECTOR(WrappedConstraintModel);
 
         using ConstraintData = ::pinocchio::ConstraintDataTpl<Scalar, Options>;
-        using ConstraintDataVector = PINOCCHIO_STD_VECTOR_WITH_EIGEN_ALLOCATOR(ConstraintData);
+        using ConstraintDataVector = PINOCCHIO_ALIGNED_STD_VECTOR(ConstraintData);
         using WrappedConstraintData = std::reference_wrapper<ConstraintData>;
-        using WrappedConstraintDataVector = std::vector<WrappedConstraintData>;
+        using WrappedConstraintDataVector = PINOCCHIO_ALIGNED_STD_VECTOR(WrappedConstraintData);
 
         using FrictionalJointConstraintModel = ::pinocchio::FrictionalJointConstraintModelTpl<Scalar, Options>;
         using FrictionalJointConstraintData = ::pinocchio::FrictionalJointConstraintDataTpl<Scalar, Options>;
 
         using BilateralPointConstraintModel = ::pinocchio::BilateralPointConstraintModelTpl<Scalar, Options>;
-        using BilateralPointConstraintModelVector = PINOCCHIO_STD_VECTOR_WITH_EIGEN_ALLOCATOR(BilateralPointConstraintModel);
+        using BilateralPointConstraintModelVector = PINOCCHIO_ALIGNED_STD_VECTOR(BilateralPointConstraintModel);
         using BilateralPointConstraintData = ::pinocchio::BilateralPointConstraintDataTpl<Scalar, Options>;
 
         using WeldConstraintModel = ::pinocchio::WeldConstraintModelTpl<Scalar, Options>;
         using WeldConstraintData = ::pinocchio::WeldConstraintDataTpl<Scalar, Options>;
-        using WeldConstraintModelVector = PINOCCHIO_STD_VECTOR_WITH_EIGEN_ALLOCATOR(WeldConstraintModel);
+        using WeldConstraintModelVector = PINOCCHIO_ALIGNED_STD_VECTOR(WeldConstraintModel);
 
         using JointLimitConstraintModel = ::pinocchio::JointLimitConstraintModelTpl<Scalar, Options>;
         using JointLimitConstraintData = ::pinocchio::JointLimitConstraintDataTpl<Scalar, Options>;
@@ -85,7 +87,7 @@ namespace simplex
         using FrictionalPointConstraintModel = ::pinocchio::FrictionalPointConstraintModelTpl<Scalar, Options>;
         using FrictionalPointConstraintData = ::pinocchio::FrictionalPointConstraintDataTpl<Scalar, Options>;
         using CoulombFrictionCone = ::pinocchio::CoulombFrictionConeTpl<Scalar>;
-        using CoulombFrictionConeVector = PINOCCHIO_STD_VECTOR_WITH_EIGEN_ALLOCATOR(CoulombFrictionCone);
+        using CoulombFrictionConeVector = PINOCCHIO_ALIGNED_STD_VECTOR(CoulombFrictionCone);
         using ConstraintCholeskyDecomposition = ::pinocchio::ContactCholeskyDecompositionTpl<Scalar, Options>;
         using ContactPointVector = PINOCCHIO_ALIGNED_STD_VECTOR(Vector3s);
         using ContactNormalVector = PINOCCHIO_ALIGNED_STD_VECTOR(Vector3s);
@@ -287,7 +289,8 @@ namespace simplex
             const GeometryModelHandle & geom_model_handle,
             const GeometryDataHandle & geom_data_handle,
             const BilateralPointConstraintModelVector & bilateral_point_constraint_models,
-            const WeldConstraintModelVector & weld_constraint_models);
+            const WeldConstraintModelVector & weld_constraint_models,
+            bool do_allocate = true);
 
         /// \brief Default constructor.
         ConstraintsProblemTpl(
@@ -314,7 +317,38 @@ namespace simplex
 
         /// ----------------------------------
         /// General methods
+        /// \brief Allocates memory for the constraints problem quantities.
+        /// Notes:
+        ///   - This method uses the the geometry model's active collision pairs to allocate memory.
+        ///   - because we always resize the constraints problem quantities, there won't be any error if
+        ///   this method is not called.
+        ///     This method is meant to optimize memory allocation for advanced users.
+        void allocate();
 
+        /// \brief Empties constraints problem quantities.
+        void clear();
+
+        /// \brief After `model`, `data`, `geom_model` and `geom_data` have been updated, this function
+        /// updates `constraints`. \param compute_warm_start whether or not to compute a warm-start for
+        /// the constraints forces, based on the previous solution of the constraints problem.
+        void update(const bool compute_warm_start);
+
+        /// \brief Build the constraints problem quantities: `G`, `g`.
+        /// Also builds the quantities necessary to warm-start the constraint solver.
+        /// Meant to be called after `update`.
+        template<typename FreeVelocityVectorType, typename VelocityVectorType, typename VelocityWarmStartVectorType>
+        void build(
+            const Eigen::MatrixBase<FreeVelocityVectorType> & vfree,
+            const Eigen::MatrixBase<VelocityVectorType> & v,
+            const Eigen::MatrixBase<VelocityWarmStartVectorType> & v_warmstart,
+            Scalar dt);
+
+        /// \brief Checks consistency of the constraints problem w.r.t to its handles.
+        bool check() const;
+
+        // -------------------------------------------------------------------------------------------------
+        // GETTERS/SETTERS
+        // -------------------------------------------------------------------------------------------------
         /// \brief Returns a const reference to the model
         const Model & model() const
         {
@@ -370,35 +404,6 @@ namespace simplex
             assert(this->m_geom_data != nullptr);
             return pinocchio::helper::get_ref(this->m_geom_data);
         }
-
-        /// \brief Allocates memory for the constraints problem quantities.
-        /// Notes:
-        ///   - This method uses the the geometry model's active collision pairs to allocate memory.
-        ///   - because we always resize the constraints problem quantities, there won't be any error if
-        ///   this method is not called.
-        ///     This method is meant to optimize memory allocation for advanced users.
-        void allocate();
-
-        /// \brief Empties constraints problem quantities.
-        void clear();
-
-        /// \brief After `model`, `data`, `geom_model` and `geom_data` have been updated, this function
-        /// updates `constraints`. \param compute_warm_start whether or not to compute a warm-start for
-        /// the constraints forces, based on the previous solution of the constraints problem.
-        void update(const bool compute_warm_start);
-
-        /// \brief Build the constraints problem quantities: `G`, `g`.
-        /// Also builds the quantities necessary to warm-start the constraint solver.
-        /// Meant to be called after `update`.
-        template<typename FreeVelocityVectorType, typename VelocityVectorType, typename VelocityWarmStartVectorType>
-        void build(
-            const Eigen::MatrixBase<FreeVelocityVectorType> & vfree,
-            const Eigen::MatrixBase<VelocityVectorType> & v,
-            const Eigen::MatrixBase<VelocityWarmStartVectorType> & v_warmstart,
-            Scalar dt);
-
-        /// \brief Checks consistency of the constraints problem w.r.t to its handles.
-        bool check() const;
 
         /// \brief Size of the constraints problem.
         int constraints_problem_size() const
