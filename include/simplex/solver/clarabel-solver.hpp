@@ -167,7 +167,7 @@ namespace simplex
             const Eigen::MatrixBase<VectorLike> & g,
             const std::vector<std::reference_wrapper<const ::pinocchio::ConstraintModelTpl<Scalar, Options>>, ConstraintModelAllocator> &
                 constraint_models,
-            const std::vector<std::reference_wrapper<const ::pinocchio::ConstraintDataTpl<Scalar, Options>>, ConstraintDataAllocator> &
+            const std::vector<std::reference_wrapper<::pinocchio::ConstraintDataTpl<Scalar, Options>>, ConstraintDataAllocator> &
                 constraint_datas,
             const boost::optional<Eigen::Ref<const VectorXs>> & preconditioner = boost::none,
             const boost::optional<Eigen::Ref<const VectorXs>> & primal_guess = boost::none,
@@ -186,6 +186,6 @@ namespace simplex
     // Include implementation
     #include "simplex/solver/clarabel-solver.hxx"
 
-#endif
+#endif // SIMPLEX_WITH_CLARABEL_SUPPORT
 
 #endif // __simplex_solver_clarabel_solver_hpp__

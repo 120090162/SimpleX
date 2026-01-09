@@ -95,10 +95,10 @@ namespace simplex
         Eigen::Index theta_size_;
 
         /// \brief Timer used for evaluating timings of jvp.
-        hpp::fcl::Timer timer_;
+        coal::Timer timer_;
 
         /// \brief Timings for the call to the contact solver.
-        hpp::fcl::CPUTimes contact_solver_derivatives_timings_;
+        coal::CPUTimes contact_solver_derivatives_timings_;
 
         /// \brief COD solver for the system of implicit gradients.
         std::shared_ptr<Eigen::CompleteOrthogonalDecomposition<Eigen::Ref<MatrixXs>>> cod_solver_;
@@ -109,17 +109,7 @@ namespace simplex
         SIMPLEX_PUBLIC
         ///
         /// \brief Default constructor
-        ContactSolverDerivativesTpl(ConstraintsProblemDerivativesHandle constraint_problem)
-        : measure_timings(false)
-        , implicit_gradient_solver_type(ImplicitGradientSystemSolver::COD) // COD by default, more stable
-        , constraint_problem_(constraint_problem)
-        , timer_(false)
-        , cod_solver_(nullptr)
-        , qr_solver_(nullptr)
-        {
-            max_theta_dim_ = 3 * constraint_problem->model().nv;
-            allocate();
-        }
+        explicit ContactSolverDerivativesTpl(ConstraintsProblemDerivativesHandle constraint_problem);
 
         ///
         /// \brief Compute the system of implicit equations
@@ -192,7 +182,7 @@ namespace simplex
 
         /// \brief Get timings of the call to the contact solver derivatives.
         /// This timing is set to 0 if there was no contacts.
-        hpp::fcl::CPUTimes getContactSolverDerivativesCPUTimes() const
+        coal::CPUTimes getContactSolverDerivativesCPUTimes() const
         {
             return contact_solver_derivatives_timings_;
         }

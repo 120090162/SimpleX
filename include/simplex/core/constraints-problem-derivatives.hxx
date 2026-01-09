@@ -523,7 +523,7 @@ namespace simplex
             const ConstraintModel & cmodel = this->constraint_models[i];
             const ConstraintData & cdata = this->constraint_datas[i];
             const int cdim = cmodel.activeSize();
-            auto gc = this->g().segment(cindex, cdim);
+            auto gc = this->g.segment(cindex, cdim);
 
             auto drift_visitor = ::simplex::visitors::make_lambda_visitor(
                 //

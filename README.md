@@ -22,7 +22,7 @@ cmake .. \
     -DBUILD_PYTHON_INTERFACE=ON \
     -DPYTHON_EXECUTABLE=$(which python)
 
-make -j4
+make -j4 2>&1 | tee build.log
 make install
 
 # 安装Clarabel库
@@ -53,10 +53,10 @@ cmake .. \
     -DBUILD_PYTHON_INTERFACE=OFF \
     -DPYTHON_EXECUTABLE=$(which python)
 
-make -j4
+make -j4 2>&1 | tee build.log
 make install
 
-# [optinal] boost test
+# [optional] boost test
 conda install -c conda-forge fmt -y
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
@@ -66,8 +66,20 @@ cmake .. \
     -DBUILD_TEST_CASES=ON \
     -DPYTHON_EXECUTABLE=$(which python)
 
-make -j4
-ctest
+make -j4 2>&1 | tee build.log
+ctest # ctest -V
+
+# [optional] benchmark
+conda install -c conda-forge google-benchmark -y
+cmake .. \
+    -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
+    -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_PYTHON_INTERFACE=OFF \
+    -BUILD_BENCHMARKS=ON \
+    -DPYTHON_EXECUTABLE=$(which python)
+make -j4 2>&1 | tee build.log
+./benchmarks/affine-transform
 ```
 
 # 测试例子

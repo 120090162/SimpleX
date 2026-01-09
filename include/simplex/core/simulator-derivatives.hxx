@@ -9,6 +9,19 @@
 namespace simplex
 {
     template<typename S, int O, template<typename, int> class JointCollectionTpl>
+    SimulatorDerivativesTpl<S, O, JointCollectionTpl>::SimulatorDerivativesTpl(const SimulatorX & simulator)
+    : measure_timings(false)
+    , contact_solver_derivatives(simulator.workspace.getConstraintProblemHandle())
+#ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
+    , patch_derivative_requests(simulator.geom_model().collisionPairs.size())
+    , patch_derivatives(simulator.geom_model().collisionPairs.size())
+#endif
+    , timer_(false)
+    {
+        allocate(simulator);
+    }
+
+    template<typename S, int O, template<typename, int> class JointCollectionTpl>
     void SimulatorDerivativesTpl<S, O, JointCollectionTpl>::allocate(const SimulatorX & simulator)
     {
         const int nv = simulator.model().nv;

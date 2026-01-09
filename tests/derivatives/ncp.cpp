@@ -1,4 +1,4 @@
-#include "simplex/core/simulator.hpp"
+#include "simplex/core/simulator-x.hpp"
 #include "simplex/core/ncp-derivatives.hpp"
 
 #include <pinocchio/algorithm/fwd.hpp>
@@ -14,10 +14,10 @@
 
 using namespace simplex;
 using namespace pinocchio;
-using ModelHandle = Simulator::ModelHandle;
-using DataHandle = Simulator::DataHandle;
-using GeometryModelHandle = Simulator::GeometryModelHandle;
-using GeometryDataHandle = Simulator::GeometryDataHandle;
+using ModelHandle = SimulatorX::ModelHandle;
+using DataHandle = SimulatorX::DataHandle;
+using GeometryModelHandle = SimulatorX::GeometryModelHandle;
+using GeometryDataHandle = SimulatorX::GeometryDataHandle;
 
 BOOST_AUTO_TEST_SUITE(BOOST_TEST_MODULE)
 
@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(contact_solver_derivatives_constructor)
     DataHandle data(new Data(*model));
     GeometryModelHandle geom_model(new GeometryModel());
     GeometryDataHandle geom_data(new GeometryData(*geom_model));
-    Simulator sim(model, data, geom_model, geom_data);
+    SimulatorX sim(model, data, geom_model, geom_data);
     BOOST_CHECK_NO_THROW(ContactSolverDerivatives dcontact(sim.workspace.getConstraintProblemHandle()));
 }
 
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(contact_solver_derivatives_sticking_cube)
 {
     Model _model;
     GeometryModel _geom_model;
-    hpp::fcl::CollisionGeometryPtr_t plane_ptr(new hpp::fcl::Halfspace(0., 0., 1., 0.));
+    coal::CollisionGeometryPtr_t plane_ptr(new coal::Halfspace(0., 0., 1., 0.));
     const FrameIndex plane_frame = FrameIndex(0);
     const GeometryObject plane_geom = GeometryObject("plane", 0, plane_frame, SE3::Identity(), plane_ptr);
     GeomIndex plane_id = _geom_model.addGeometryObject(plane_geom);
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(contact_solver_derivatives_sticking_cube)
     const SE3 placement = SE3::Identity();
     JointIndex joint_id = _model.addJoint(parent, joint, placement, joint_name);
     _model.appendBodyToJoint(joint_id, inertia);
-    hpp::fcl::CollisionGeometryPtr_t box_ptr(new hpp::fcl::Box(r, r, r));
+    coal::CollisionGeometryPtr_t box_ptr(new coal::Box(r, r, r));
     const GeometryObject box_geom = GeometryObject(name, joint_id, placement, box_ptr);
     GeomIndex box_id = _geom_model.addGeometryObject(box_geom);
     CollisionPair cp(plane_id, box_id);
@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(contact_solver_derivatives_sticking_cube)
     std::shared_ptr<Data> data = std::make_shared<Data>(_data);
     GeometryData _geom_data(_geom_model);
     std::shared_ptr<GeometryData> geom_data = std::make_shared<GeometryData>(_geom_data);
-    Simulator sim(model, data, geom_model, geom_data);
+    SimulatorX sim(model, data, geom_model, geom_data);
 
     Eigen::VectorXd q = neutral(*model);
 
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(contact_solver_derivatives_sliding_and_sticking_cubes)
     std::vector<double> radius(N_cubes, 1.0);
     Model _model;
     GeometryModel _geom_model;
-    hpp::fcl::CollisionGeometryPtr_t plane_ptr(new hpp::fcl::Halfspace(0., 0., 1., 0.));
+    coal::CollisionGeometryPtr_t plane_ptr(new coal::Halfspace(0., 0., 1., 0.));
     const FrameIndex plane_frame = FrameIndex(0);
     const GeometryObject plane_geom = GeometryObject("plane", 0, plane_frame, SE3::Identity(), plane_ptr);
     GeomIndex plane_id = _geom_model.addGeometryObject(plane_geom);
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(contact_solver_derivatives_sliding_and_sticking_cubes)
         const SE3 placement = SE3::Identity();
         JointIndex joint_id = _model.addJoint(parent, joint, placement, joint_name);
         _model.appendBodyToJoint(joint_id, inertia);
-        hpp::fcl::CollisionGeometryPtr_t box_ptr(new hpp::fcl::Box(r, r, r));
+        coal::CollisionGeometryPtr_t box_ptr(new coal::Box(r, r, r));
         const GeometryObject box_geom = GeometryObject(name, joint_id, placement, box_ptr);
         GeomIndex box_id = _geom_model.addGeometryObject(box_geom);
         CollisionPair cp(plane_id, box_id);
@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(contact_solver_derivatives_sliding_and_sticking_cubes)
     std::shared_ptr<Data> data = std::make_shared<Data>(_data);
     GeometryData _geom_data(_geom_model);
     std::shared_ptr<GeometryData> geom_data = std::make_shared<GeometryData>(_geom_data);
-    Simulator sim(model, data, geom_model, geom_data);
+    SimulatorX sim(model, data, geom_model, geom_data);
 
     Eigen::VectorXd q = neutral(*model);
     for (int i = 0; i < N_cubes; ++i)

@@ -114,6 +114,7 @@ endif()
 # Force C++ standard to be C++14 at least
 check_minimal_cxx_standard(14 ENFORCE)
 
+option(BUILD_BENCHMARKS "Build the benchmarks" OFF)
 option(BUILD_TEST_CASES "Build the simulator tests" OFF)
 option(BUILD_PYTHON_INTERFACE "Build the Python bindings" ON)
 option(GENERATE_PYTHON_STUBS "Generate the Python stubs associated to the Python library" OFF)
@@ -133,7 +134,7 @@ endif(APPLE)
 
 option(INITIALIZE_WITH_NAN "Initialize Eigen entries with NaN" OFF)
 option(CHECK_RUNTIME_MALLOC "Check if some memory allocations are performed at runtime" OFF)
-option(ENABLE_TEMPLATE_INSTANTIATION "Template instantiation of the main library" ON)
+option(ENABLE_TEMPLATE_INSTANTIATION "Template instantiation of the main library" OFF) # may have some issues
 option(SIMPLEX_DOWNLOAD_TRACY "Use FetchContent to install Tracy." OFF)
 
 set(CFLAGS_OPTIONS)
@@ -309,6 +310,13 @@ if(BUILD_PYTHON_INTERFACE)
 	list(APPEND ${PROJECT_NAME}_HEADERS ${${PROJECT_NAME}_BINDINGS_PYTHON_PUBLIC_HEADERS})
 endif()
 add_subdirectory(src)
+
+# ----------------------------------------------------
+# --- BENCHMARK --------------------------------------
+# ----------------------------------------------------
+if(BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif(BUILD_BENCHMARKS)
 
 # ----------------------------------------------------
 # --- BINDINGS ---------------------------------------

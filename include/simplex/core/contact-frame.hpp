@@ -27,7 +27,6 @@ namespace simplex
         using SE3 = ::pinocchio::SE3Tpl<Scalar, Options>;
         using Matrix63s = Eigen::Matrix<Scalar, 6, 3, Options>;
         using Vector3s = Eigen::Matrix<Scalar, 3, 1, Options>;
-        using Block3 = Eigen::Block<Matrix6x3Type1, 3, 3>;
 
         /// \brief Computes a placement M from a normal and position.
         /// \param[in] normal is the z-axis of the rotation part of M.

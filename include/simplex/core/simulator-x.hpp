@@ -3,18 +3,19 @@
 
 #include "simplex/core/fwd.hpp"
 #include "simplex/core/constraints-problem-derivatives.hpp"
+#include "simplex/solver/admm-solver.hpp"
 #include "simplex/solver/clarabel-solver.hpp"
 #include "simplex/macros.hpp"
 
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <pinocchio/multibody/geometry.hpp>
+
 #include <pinocchio/algorithm/aba.hpp>
 #include <pinocchio/algorithm/contact-inverse-dynamics.hpp>
 #include <pinocchio/algorithm/geometry.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 #include <pinocchio/algorithm/crba.hpp>
-#include <pinocchio/algorithm/admm-solver.hpp>
 #include <pinocchio/algorithm/pgs-solver.hpp>
 #include <pinocchio/algorithm/proximal.hpp>
 #include "pinocchio/algorithm/delassus-operator-cholesky-expression.hpp"
@@ -23,7 +24,9 @@
 #include <pinocchio/algorithm/contact-cholesky.hpp>
 #include <pinocchio/algorithm/contact-info.hpp>
 #include <pinocchio/algorithm/constraints/utils.hpp>
+
 #include <pinocchio/collision/collision.hpp>
+#include <pinocchio/collision/broadphase.hpp>
 #include <pinocchio/collision/broadphase-manager.hpp>
 
 #include <coal/broadphase/broadphase_dynamic_AABB_tree.h>
@@ -40,7 +43,7 @@ namespace simplex
     template<typename _Scalar>
     struct ClarabelConstraintSolverConfigTpl;
     /**
-     * @brief Traits to define associated types for the Simulator.
+     * @brief Traits to define associated types for the SimulatorX.
      */
     template<typename _Scalar, int _Options, template<typename, int> class JointCollectionTpl>
     struct traits<SimulatorXTpl<_Scalar, _Options, JointCollectionTpl>>
@@ -94,17 +97,17 @@ namespace simplex
         // TODO: template simulator by broad phase manager
         using BroadPhaseManager = ::pinocchio::BroadPhaseManagerTpl<coal::DynamicAABBTreeCollisionManager>;
         using BroadPhaseManagerHandle = std::shared_ptr<BroadPhaseManager>;
-        using CollisionCallbackCollect = ::pinocchio::CollisionCallBackCollect;
+        using CollisionCallBackCollect = ::pinocchio::CollisionCallBackCollect;
         using CollisionCallBackCollectHandle = std::shared_ptr<CollisionCallBackCollect>;
 
         // Contact solvers
-        using ADMMConstraintSolver = ::pinocchio::ADMMContactSolverTpl<Scalar>;
+        using ADMMConstraintSolver = ::simplex::ADMMContactSolverTpl<Scalar>;
         using ADMMConstraintSolverConfig = ADMMConstraintSolverConfigTpl<Scalar>;
         using PGSConstraintSolver = ::pinocchio::PGSContactSolverTpl<Scalar>;
         using PGSConstraintSolverConfig = PGSConstraintSolverConfigTpl<Scalar>;
-#ifdef SIMPLE_WITH_CLARABEL_SUPPORT
+#ifdef SIMPLEX_WITH_CLARABEL_SUPPORT
         using ClarabelConstraintSolver = ::simplex::ClarabelContactSolverTpl<Scalar, Options>;
-#endif
+#endif // SIMPLEX_WITH_CLARABEL_SUPPORT
         using ClarabelConstraintSolverConfig = ClarabelConstraintSolverConfigTpl<Scalar>;
 
         using SpatialForce = ::pinocchio::ForceTpl<Scalar, Options>;
@@ -124,10 +127,15 @@ namespace simplex
         using WeldConstraintData = typename ConstraintsProblemDerivatives::WeldConstraintData;
         using WeldConstraintModelVector = typename ConstraintsProblemDerivatives::WeldConstraintModelVector;
 
-        using ConstraintModel = typename ConstraintsProblemDerivatives::ConstraintModel;
-        using WrappedConstraintModel = typename ConstraintsProblemDerivatives::WrappedConstraintModel;
-        using ConstraintData = typename ConstraintsProblemDerivatives::ConstraintData;
-        using WrappedConstraintData = typename ConstraintsProblemDerivatives::WrappedConstraintData;
+        using ConstraintModel = ::pinocchio::ConstraintModelTpl<Scalar, Options>;
+        using ConstraintModelVector = PINOCCHIO_ALIGNED_STD_VECTOR(ConstraintModel);
+        using WrappedConstraintModel = std::reference_wrapper<const ConstraintModel>;
+        using WrappedConstraintModelVector = PINOCCHIO_ALIGNED_STD_VECTOR(WrappedConstraintModel);
+
+        using ConstraintData = ::pinocchio::ConstraintDataTpl<Scalar, Options>;
+        using ConstraintDataVector = PINOCCHIO_ALIGNED_STD_VECTOR(ConstraintData);
+        using WrappedConstraintData = std::reference_wrapper<ConstraintData>;
+        using WrappedConstraintDataVector = PINOCCHIO_ALIGNED_STD_VECTOR(WrappedConstraintData);
 
         using ConstraintCholeskyDecomposition = ::pinocchio::ContactCholeskyDecompositionTpl<Scalar, Options>;
         using DelassusCholeskyExpressionOperator = ::pinocchio::DelassusCholeskyExpressionTpl<ConstraintCholeskyDecomposition>;
@@ -166,13 +174,13 @@ namespace simplex
             struct ConstraintSolverConfigContainer
             {
                 /// \brief Configuration for the ADMM constraint solver.
-                ADMMConstraintSolverConfig admm_settings;
+                ADMMConstraintSolverConfig admm_config;
 
                 /// \brief Configuration for the PGS constraint solver.
-                PGSConstraintSolverConfig pgs_settings;
+                PGSConstraintSolverConfig pgs_config;
 
                 /// \brief Configuration for the Clarabel constraint solver.
-                ClarabelConstraintSolverConfig clarabel_settings;
+                ClarabelConstraintSolverConfig clarabel_config;
 
             } constraint_solvers_configs;
 
@@ -182,293 +190,294 @@ namespace simplex
             /// \brief Whether or not timings of the `step` function are measured.
             /// If set to true, the timing of the last call to `step` can be accessed in `SimulatorXTpl::timings`.
             bool measure_timings{false};
-        } settings;
-        // --- Simulator State Variables ---
-        /// \brief Joints configuration of the system - copied from `step` input
-        VectorXs q;
+        } config;
 
-        /// \brief Joints velocity of the system - copied from `step` input
-        VectorXs v;
-
-        /// \brief External joint torques - copied from `step` input
-        VectorXs tau;
-
-        /// \brief External 6D force exerted in the local frame of each joint - copied from `step` input
-        SpatialForceVector fext;
-
-        /// \brief Time step of the simulator - copied from `step` input
-        Scalar dt;
-
-        /// \brief The updated joint configuration of the system.
-        VectorXs qnew;
-
-        /// \brief Free velocity i.e. the updated velocity of the system without any constraint forces.
-        VectorXs vfree;
-
-        /// \brief The updated velocity, taking into account the correction due to constraint forces.
-        VectorXs vnew;
-
-        /// \brief The updated acceleration, taking into account the correction due to constraint forces.
-        VectorXs anew;
-
-        /// \brief Vector of total spatial forces (i.e. external forces + constraint forces) applied on
-        /// joints, expressed in the local frame of each joint. Note: by subtracting the external forces
-        /// (given to the `step` method of the simulator) to `ftotal`, we get the constraint forces
-        /// expressed in the local frame of the joints.
-        SpatialForceVector ftotal;
-
-        /// \brief Vector of total torques (i.e. applied tau + dry friction on joints + forces due to joint limits) applied on
-        /// joints.
-        VectorXs tau_total;
-
-        /// \brief Vector of constraint torques
-        VectorXs tau_constraints;
-
-        // --- Solver Settings ---
-        // refer to paper: "From Compliant to Rigid Contact Simulation: a Unified and Efficient Approach"
-        struct ConstraintSolverSettings
-        {
-            /// @brief Maximum number of iterations allowed for the solver (n_iter in Algorithm 1).
-            int max_iter{1000};
-
-            /// @brief Absolute convergence tolerance (epsilon_abs in Eq. 43).
-            /// The solver stops when primal, dual, and complementarity residuals are below this value.
-            Scalar absolute_precision{1e-8};
-
-            /// @brief Relative convergence tolerance.
-            /// Used to account for the scale of the problem variables, avoiding stagnation due to numerical limits.
-            Scalar relative_precision{1e-8};
-
-            /// @brief Flag to enable or disable the collection of solver statistics (e.g., iteration count, residuals).
-            bool stat_record{false};
-        };
-
-        /** Settings tailored for ADMM solver (regularization and update rules). */
-        /// \brief Struct to store the settings for the ADMM constraint solver.
         ///
-        /// Pinocchio's ADMM has two regularization term
-        /// -> tau * rho for the augmented lagrangian term (consensus penalty)
-        /// -> mu term for the proximal term (primal variable regularization)
+        /// \brief State of the simulator.
+        /// When `step` is called with (q, v, tau, fext, dt), these quantities are stored in the state of the simulator.
+        /// During `step`, the rest of the state is computed by solving the equations of motion s.t. the dynamics' constraints are
+        /// fulfilled.
+        struct SimulatorState
+        {
+            /// \brief Joints configuration of the system - copied from `step` input.
+            VectorXs q;
+
+            /// \brief Joints velocity of the system - copied from `step` input.
+            VectorXs v;
+
+            /// \brief Joint torques applied to the system - copied from `step` input.
+            VectorXs tau;
+
+            /// \brief Time step of the simulator - copied from `step` input.
+            Scalar dt{Scalar(-1)};
+
+            /// \brief External 6D forces exerted in the local frame of each joint - copied from `step` input.
+            SpatialForceVector fext;
+
+            /// \brief Type of constraint solver used in the current call to the `step` method.
+            /// This enum is meant to indicate which solver is currently used. It does not reflect **which one to use**.
+            /// To use a specific constraint solver, use the template of the `step` method (e.g. step<PGSConstraintSolver>,
+            /// step<ADMMConstraintSolver>, or step<ClarabelConstraintSolver>).
+            enum struct ConstraintSolverType
+            {
+                PGS,
+                ADMM,
+                CLARABEL,
+                NONE
+            } constraint_solver_type{ConstraintSolverType::NONE};
+
+            /// \brief Torque due to damping - computed as -damping * v.
+            VectorXs tau_damping;
+
+            /// \brief The updated joint configuration of the system.
+            VectorXs qnew;
+
+            /// \brief Free velocity i.e. the updated velocity of the system without any constraint forces.
+            VectorXs vfree;
+
+            /// \brief Free acceleration i.e. the updated acceleration of the system without any constraint forces.
+            VectorXs afree;
+
+            /// \brief The updated velocity, taking into account the correction due to constraint forces.
+            VectorXs vnew;
+
+            /// \brief The updated acceleration, taking into account the correction due to constraint forces.
+            VectorXs anew;
+
+            /// \brief Total torques (i.e. applied tau + dry friction on joints + forces due to joint limits)
+            /// applied on joints.
+            VectorXs tau_total;
+
+            /// \brief Torques applied on joints due to constraints.
+            VectorXs tau_constraints;
+
+            /// \brief Whether or not the simulator is in reset state (no previous state).
+            bool is_reset{true};
+
+            ///
+            /// \brief Initialize simulator's state.
+            void init(int nq, int nv, int njoints);
+
+            ///
+            /// \brief Reset the simulator's state, preparing it for a new trajectory within the same scene (same
+            /// model/geom_model/constraints).
+            void reset();
+
+            ///
+            /// \brief Sanity check of the simulator's state.
+            bool check(const Model & model) const;
+        } state;
+
+        /// \brief Workspace of the simulator.
+        /// Holds tools required to do constrained physics computation (collision detection and constraint resolution).
+        struct SimulatorWorkspace
+        {
+            SIMPLEX_PROTECTED
+            /// \brief Collision callback for broadphase collision detection.
+            CollisionCallBackCollectHandle collision_callback_;
+
+            /// \brief Broad phase manager.
+            /// \note Can be accessed by reference via `broadphase_manager()` method.
+            BroadPhaseManagerHandle broadphase_manager_;
+
+            /// \brief Constraint problem.
+            /// \note Can be accessed by reference via `constraint_problem()` method.
+            ConstraintsProblemDerivativesHandle constraint_problem_;
+
+            SIMPLEX_PUBLIC
+            ///
+            /// \brief Container for the constraint solvers and their associated results that can be used to solve constraints during
+            /// `step`.
+            struct ConstraintSolverContainer
+            {
+                /// \brief ADMM constraint solver.
+                ADMMConstraintSolver admm_solver;
+
+                /// \brief PGS constraint solver.
+                PGSConstraintSolver pgs_solver;
+
+#ifdef SIMPLEX_WITH_CLARABEL_SUPPORT
+                /// \brief Clarabel constraint solver.
+                ClarabelConstraintSolver clarabel_solver;
+#endif // SIMPLEX_WITH_CLARABEL_SUPPORT
+
+                /// \brief Base constructor creates empty ADMM, PGS, and Clarabel solvers.
+                /// This allows the simulator to create the solvers only when needed.
+                ConstraintSolverContainer()
+                : admm_solver(0)
+                , pgs_solver(0)
+#ifdef SIMPLEX_WITH_CLARABEL_SUPPORT
+                , clarabel_solver(0)
+#endif // SIMPLEX_WITH_CLARABEL_SUPPORT
+                {
+                }
+            } constraint_solvers;
+
+            /// \brief Temporary variable used to integrate the system's state.
+            VectorXs vnew_integration_tmp;
+
+            ///
+            /// \brief Returns a const reference to the broad phase collision callback.
+            const CollisionCallBackCollect & collision_callback() const
+            {
+                assert(collision_callback_ != nullptr && "collision_callback_ is nullptr");
+                return ::pinocchio::helper::get_ref(collision_callback_);
+            }
+
+            ///
+            /// \brief Returns a const reference to the broad phase collision callback.
+            CollisionCallBackCollect & collision_callback()
+            {
+                assert(collision_callback_ != nullptr && "collision_callback_ is nullptr");
+                return ::pinocchio::helper::get_ref(collision_callback_);
+            }
+
+            ///
+            /// \brief Returns a const reference to the broad phase manager.
+            const BroadPhaseManager & broadphase_manager() const
+            {
+                assert(broadphase_manager_ != nullptr && "broadphase_manager_ is nullptr");
+                return ::pinocchio::helper::get_ref(broadphase_manager_);
+            }
+
+            ///
+            /// \brief Returns a reference to the broad phase manager.
+            BroadPhaseManager & broadphase_manager()
+            {
+                assert(broadphase_manager_ != nullptr && "broadphase_manager_ is nullptr");
+                return ::pinocchio::helper::get_ref(broadphase_manager_);
+            }
+
+            ///
+            /// \brief Returns a const reference to the constraint problem.
+            const ConstraintsProblemDerivatives & constraint_problem() const
+            {
+                assert(constraint_problem_ != nullptr && "constraint_problem_ is nullptr");
+                return ::pinocchio::helper::get_ref(constraint_problem_);
+            }
+
+            ///
+            /// \brief Returns a const reference to the constraint problem.
+            ConstraintsProblemDerivatives & constraint_problem()
+            {
+                assert(constraint_problem_ != nullptr && "constraint_problem_ is nullptr");
+                return ::pinocchio::helper::get_ref(constraint_problem_);
+            }
+
+            ///
+            /// \brief Returns a handle to the constraint problem
+            /// TODO(louis): remove this method
+            ConstraintsProblemDerivativesHandle getConstraintProblemHandle() const
+            {
+                assert(constraint_problem_ != nullptr && "constraint_problem_ is nullptr");
+                return constraint_problem_;
+            }
+
+            ///
+            /// \brief Initialize simulator workspace.
+            void init(ModelHandle model, DataHandle data, GeometryModelHandle geom_model, GeometryDataHandle geom_data);
+
+            ///
+            /// \brief Reset the simulator's workspace, preparing it for a new trajectory within the same scene (same
+            /// model/geom_model/constraints).
+            void reset();
+
+            ///
+            /// \brief Sanity check of the simulator's workspace.
+            bool check(const Model & model, const bool constraint_problem_has_been_updated) const;
+        } workspace;
+
+        /// \brief Timings related to events occuring during a call to `step`.
+        struct SimulatorTimings
+        {
+            /// \brief Timings for broad phase collision detection.
+            ::coal::CPUTimes timings_broadphase_collision_detection;
+
+            /// \brief Timings for narrow phase collision detection.
+            ::coal::CPUTimes timings_narrowphase_collision_detection;
+
+            /// \brief Timings for collision detection.
+            ::coal::CPUTimes timings_collision_detection;
+
+            /// \brief Timings for the call to the constraint solver.
+            ::coal::CPUTimes timings_constraint_solver;
+
+            /// \brief Timings for the whole `step` method.
+            ::coal::CPUTimes timings_step;
+
+            SIMPLEX_PROTECTED
+            /// \brief Timer used for the whole `step` method.
+            ::coal::Timer timer_step{false};
+
+            /// \brief Timer used for internal methods inside `step`.
+            ::coal::Timer timer_internal{false};
+
+            /// \brief Timer used for broad and narrow phase collision detection.
+            ::coal::Timer timer_collision_detection{false};
+
+            SIMPLEX_PUBLIC
+            /// \brief Clear timings.
+            void clear();
+
+            // allow simulator to access timings
+            friend struct SimulatorXTpl;
+        } timings;
+
+        // -------------------------------------------------------------------------------------------------
+        // CONSTRUCTORS
+        // -------------------------------------------------------------------------------------------------
+        SIMPLEX_PUBLIC
         ///
-        /// ADMM update rule: if ratio_primal_dual reached, rho *= rho_increment, where
-        /// rho_increment = pow(L/m, rho_power_factor).
+        /// \brief Constructor specifying the Data and GeometryData associated to the Model and GeometryModel.
+        SimulatorXTpl(
+            ModelHandle model_handle,              //
+            DataHandle data_handle,                //
+            GeometryModelHandle geom_model_handle, //
+            GeometryDataHandle geom_data_handle);
+
         ///
-        /// Initialization of rho:
-        /// -- If linear update rule   -> rho is initialized by ADMM constructor or `setRho`
-        /// -- If spectral update rule -> rho is initialized by ADMM `computeRho` = sqrt(L*m) * pow(L/m, rho_power)
-        ///
-        struct ADMMConstraintSolverSettings : ConstraintSolverSettings
-        {
-            /// @brief Proximal regularization term (eta in Eq. 35 and Eq. 37).
-            /// This term ensures the linear system in the f-update step is always strictly positive definite (invertible),
-            /// even for rigid contacts (R=0) or ill-conditioned Delassus matrices.
-            Scalar mu{1e-6}; // η
-
-            /// \brief Linear scaling of the ADMM penalty term
-            Scalar tau{0.5};
-
-            /// @brief The Augmented Lagrangian penalty parameter (rho in Eq. 33).
-            /// This is the "step size" of the dual update. It balances the convergence speed between
-            /// satisfying the constraints (primal residual) and minimizing the objective (dual residual).
-            // initial value of rho for linear update rule
-            Scalar rho{10}; // ρ
-
-            /// @brief The exponent parameter for the Spectral Update Rule (p in Eq. 45).
-            /// Used when admm_update_rule is SPECTRAL. It scales rho based on the condition number (kappa)
-            /// of the problem: rho = sqrt(m*L) * kappa^p.
-            // initial value of the rho_power for spectral update rule
-            Scalar rho_power{0.2};
-
-            /// @brief The increment/decrement step for the rho_power parameter (p_inc / p_dec in Eq. 46).
-            /// In the Spectral Update Rule, if residuals are unbalanced, 'p' is adjusted by this factor
-            /// to adapt rho dynamically.
-            Scalar rho_power_factor{0.05};
-
-            /// @brief The multiplication/division factor for the Linear Update Rule (tau_inc / tau_dec in Eq. 44).
-            /// Used when admm_update_rule is LINEAR. If primal/dual residuals diverge, rho is multiplied
-            /// or divided by this factor (typically > 1).
-            Scalar linear_update_rule_factor{2};
-
-            /// @brief The threshold ratio between primal and dual residuals (alpha in Eq. 44 and Eq. 46).
-            /// This defines the "tube" width. If one residual is 'alpha' times larger than the other,
-            /// the update rule (Linear or Spectral) is triggered to adjust rho.
-            Scalar ratio_primal_dual{50}; // α
-
-            /// @brief Number of iterations for the power iteration or Lanczos algorithm.
-            /// Used in the Spectral Update Rule to estimate the largest (L) and smallest (m) eigenvalues
-            /// of the augmented Delassus matrix (Eq. 45) to compute the condition number.
-            // higher leads to more accurate eigvalues estimation. Max size = constraint problem size
-            int lanczos_size{3};
-
-            /// @brief Strategy for updating the penalty parameter rho (Section III-F).
-            /// Options:
-            /// - LINEAR: Standard ADMM update based on residual ratios (Eq. 44).
-            /// - SPECTRAL: Novel update rule based on spectral properties of the Delassus matrix (Eq. 45, 46).
-            ::pinocchio::ADMMUpdateRule admm_update_rule{::pinocchio::ADMMUpdateRule::SPECTRAL};
-        };
-
-        /// \brief Settings for the ADMM constraint solver.
-        ADMMConstraintSolverSettings admm_constraint_solver_settings;
-
-        /// \brief Struct to store the settings for the PGS constraint solver.
-        struct PGSConstraintSolverSettings : ConstraintSolverSettings
-        {
-            Scalar over_relax{1.0};
-        };
-
-        /// \brief Settings for the PGS constraint solver.
-        PGSConstraintSolverSettings pgs_constraint_solver_settings;
-
-        /// \brief Type of constraint solver used in the last call to the `step` method.
-        /// This enum is meant to indicate which solver was used, not which one to use.
-        /// To use a specific constraint solver, use the template of the `step` method.
-        enum struct ConstraintSolverType
-        {
-            PGS,
-            ADMM,
-            NONE
-        };
-
-        /// \brief Type of constraint solver used in the last call to the `step` method.
-        ConstraintSolverType constraint_solver_type;
-
-        /// \brief ADMM constraint solver.
-        ADMMConstraintSolver admm_constraint_solver;
-
-        /// \brief PGS constraint solver.
-        PGSConstraintSolver pgs_constraint_solver;
-
-        /// \brief Whether or not to warm-start the constraint solver.
-        bool warm_start_constraints_forces{true};
-
-        /// \brief Whether or not timings of the `step` function are measured.
-        /// If set to true, the timing of the last call to `step` can be accessed via `getCPUTimes`
-        bool measure_timings{false};
-
-        // --- Timing Utilities ---
-        /// \brief Get timings of the last call to the `step` method.
-        coal::CPUTimes getStepCPUTimes() const
-        {
-            return this->m_step_timings;
-        }
-
-        /// \brief Get timings of the call to the constraint solver in the last call of `step`.
-        /// This timing is set to 0 if there was no constraints.
-        coal::CPUTimes getConstraintSolverCPUTimes() const
-        {
-            return this->m_constraint_solver_timings;
-        }
-
-        /// \brief Get timings of the collision detection stage.
-        coal::CPUTimes getCollisionDetectionCPUTimes() const
-        {
-            return this->m_collision_detection_timings;
-        }
+        /// \brief Constructor specifying only the Model and GeometryModel.
+        SimulatorXTpl(ModelHandle model_handle, GeometryModelHandle geom_model_handle);
 
         /// \brief Virtual destructor of the base class
-        virtual ~SimulatorTpl()
+        virtual ~SimulatorXTpl()
         {
         }
 
-        SIMPLEX_PROTECTED
-        /// \brief Broad phase manager
-        // TODO: template by broad phase type (no broad phase, dynamic aabb tree, SAP etc)
-        BroadPhaseManagerHandle m_broad_phase_manager;
+        // -------------------------------------------------------------------------------------------------
+        // HELPERS
+        // -------------------------------------------------------------------------------------------------
 
-        /// \brief Collision callback
-        CollisionCallbackCollect m_collision_callback;
+        /// \brief Allocates data for the simulator based on model/geom_model.
+        /// This method should be called if model or geom_model have been modified (i.e. when the simulated scene
+        /// is modified).
+        void init();
 
-        /// \brief Constraint problem
-        ConstraintsProblemDerivativesHandle m_constraints_problem;
-
-        /// \brief Temporary variable used to integrate the system's state
-        VectorXs m_vnew_integration_tmp;
-
-        /// \brief Whether or not the simulator has been reset.
-        bool m_is_reset;
-
-        // Profiling timers
-        /// \brief Timer used for the whole `step` method
-        coal::Timer m_step_timer;
-
-        /// \brief Timings for the whole `step` method.
-        coal::CPUTimes m_step_timings;
-
-        /// \brief Timer used for internal methods inside `step`.
-        coal::Timer m_internal_timer;
-
-        /// \brief Timings for the call to the constraint solver.
-        coal::CPUTimes m_constraint_solver_timings;
-
-        /// \brief Timings for collision detection.
-        coal::CPUTimes m_collision_detection_timings;
-
-        SIMPLEX_PUBLIC
-        // --- Constructors ---
-        /// \brief Constructor specifying the Data and GeometryData associated to the model and geom_model.
-        SimulatorTpl(
-            ModelHandle model_handle,
-            DataHandle data_handle,
-            GeometryModelHandle geom_model_handle,
-            GeometryDataHandle geom_data_handle,
-            const BilateralPointConstraintModelVector & bilateral_constraint_models,
-            const WeldConstraintModelVector & weld_constraint_models);
-
-        /// \brief Constructor using model, data, geometry model, geometry data and vector of bilateral constraints.
-        SimulatorTpl(
-            ModelHandle model_handle,
-            DataHandle data_handle,
-            GeometryModelHandle geom_model_handle,
-            GeometryDataHandle geom_data_handle,
-            const BilateralPointConstraintModelVector & bilateral_constraint_models);
-
-        /// \brief Constructor using model, data, geometry model, geometry data and vector of weld constraints.
-        SimulatorTpl(
-            ModelHandle model_handle,
-            DataHandle data_handle,
-            GeometryModelHandle geom_model_handle,
-            GeometryDataHandle geom_data_handle,
-            const WeldConstraintModelVector & weld_constraint_models);
-
-        /// \brief Default constructor
-        /// Whenever the model or the geometry model is changed, this constructor should be called.
-        SimulatorTpl(
-            ModelHandle model_handle, DataHandle data_handle, GeometryModelHandle geom_model_handle, GeometryDataHandle geom_data_handle);
-
-        /// \brief Default constructor
-        /// Whenever the model or the geometry model is changed, this constructor should be called.
-        SimulatorTpl(
-            ModelHandle model_handle,
-            GeometryModelHandle geom_model_handle,
-            const BilateralPointConstraintModelVector & bilateral_constraint_models);
-
-        /// \brief Default constructor
-        /// Whenever the model or the geometry model is changed, this constructor should be called.
-        SimulatorTpl(
-            ModelHandle model_handle, GeometryModelHandle geom_model_handle, const WeldConstraintModelVector & weld_constraint_models);
-
-        /// \brief Default constructor
-        /// Whenever the model or the geometry model is changed, this constructor should be called.
-        SimulatorTpl(
-            ModelHandle model_handle,
-            GeometryModelHandle geom_model_handle,
-            const BilateralPointConstraintModelVector & bilateral_constraint_models,
-            const WeldConstraintModelVector & weld_constraint_models);
-
-        /// \brief Default constructor
-        /// Whenever the model or the geometry model is changed, this constructor should be called.
-        SimulatorTpl(ModelHandle model_handle, GeometryModelHandle geom_model_handle);
-
+        ///
         /// \brief Resets the internal quantities of the simulator.
-        /// This methods needs to be called before looping on the `step` method, for example when the
+        /// This methods can be called before looping on the `step` method, e.g. when the
         /// initial state (q0, v0) of the system is used as an input to `step` and (q0, v0) have not
-        /// been computed using the `step` method. \note If, instead, the simulator's model, data,
-        /// geom_model or geom_data have changed, please call the constructor.
+        /// been computed using the `step` method.
+        /// \note If, instead, the simulator's model, data, geom_model or geom_data have changed,
+        /// please call a constructor or `init`.
         void reset();
 
-        /** @brief Primary simulation step function. Solves constraints and integrates dynamics. */
+        ///
+        /// \brief Helper to add a point anchor constraint.
+        void addPointAnchorConstraints(const BilateralPointConstraintModelVector & point_anchor_constraint_models);
+
+        ///
+        /// \brief Helper to add a frame anchor constraint.
+        void addFrameAnchorConstraints(const WeldConstraintModelVector & frame_anchor_constraint_models);
+
+        /// -------------------------------------------------------------------------------------------------
+        /// CORE METHODS
+        /// -------------------------------------------------------------------------------------------------
+
+        ///
+        /// \brief Main step function of the simulator.
         template<
-            template<typename> class ConstraintSolver = ::pinocchio::ADMMContactSolverTpl,
+            template<typename> class ConstraintSolver = ::simplex::ADMMContactSolverTpl,
             typename ConfigVectorType,
             typename VelocityVectorType,
             typename TorqueVectorType>
@@ -478,12 +487,13 @@ namespace simplex
             const Eigen::MatrixBase<TorqueVectorType> & tau,
             Scalar dt);
 
-        /** @brief Overloaded step function with external spatial forces support. fext must be expressed in the local frame of each joint.
-            TODO: remove aligned_vector and template by Allocator.
-            TODO: change MatrixBase to PlainObject
-        **/
+        ///
+        /// \brief Main step function of the simulator.
+        /// fext must be expressed in the local frame of each joint.
+        // TODO: remove aligned_vector and template by Allocator.
+        // TODO: change MatrixBase to PlainObject
         template<
-            template<typename> class ConstraintSolver = ::pinocchio::ADMMContactSolverTpl,
+            template<typename> class ConstraintSolver = ::simplex::ADMMContactSolverTpl,
             typename ConfigVectorType,
             typename VelocityVectorType,
             typename TorqueVectorType,
@@ -495,174 +505,294 @@ namespace simplex
             const pinocchio::container::aligned_vector<ForceDerived> & fext,
             const Scalar dt);
 
+        ///
         /// \brief Returns true if the simulator is in its reset state.
         bool isReset() const
         {
-            return this->m_is_reset;
+            return state.is_reset;
         }
 
+        ///
         /// \brief Check consistency of the simulator.
-        bool check() const;
+        bool check(const bool constraint_problem_has_been_updated) const;
 
+        ///
         /// \brief Check consistency of the collision pairs.
         /// This method checks thath the geometry model does not contain collision pairs between
         /// geometry objects from the same parent joint.
         bool checkCollisionPairs() const;
 
-        // --- Accessors ---
+        ///
         /// \brief Returns a const reference to the model
         const Model & model() const
         {
-            return pinocchio::helper::get_ref(this->m_model);
+            return ::pinocchio::helper::get_ref(model_);
         }
 
+        ///
         /// \brief Returns a reference to the model
         Model & model()
         {
-            return pinocchio::helper::get_ref(this->m_model);
+            return ::pinocchio::helper::get_ref(model_);
         }
 
+        ///
         /// \brief Returns a const reference to the data
         const Data & data() const
         {
-            return pinocchio::helper::get_ref(this->m_data);
+            return ::pinocchio::helper::get_ref(data_);
         }
 
+        ///
         /// \brief Returns a reference to the data
         Data & data()
         {
-            return pinocchio::helper::get_ref(this->m_data);
+            return ::pinocchio::helper::get_ref(data_);
         }
 
+        ///
         /// \brief Returns a const reference to the geometry model
         const pinocchio::GeometryModel & geom_model() const
         {
-            return pinocchio::helper::get_ref(this->m_geom_model);
+            return ::pinocchio::helper::get_ref(geom_model_);
         }
 
+        ///
         /// \brief Returns a reference to the geometry model
         pinocchio::GeometryModel & geom_model()
         {
-            return pinocchio::helper::get_ref(this->m_geom_model);
+            return ::pinocchio::helper::get_ref(geom_model_);
         }
 
+        ///
         /// \brief Returns a const reference to the geometry data
         const pinocchio::GeometryData & geom_data() const
         {
-            return pinocchio::helper::get_ref(this->m_geom_data);
+            return ::pinocchio::helper::get_ref(geom_data_);
         }
 
+        ///
         /// \brief Returns a reference to the geometry data
         pinocchio::GeometryData & geom_data()
         {
-            return pinocchio::helper::get_ref(this->m_geom_data);
-        }
-
-        /// \brief Returns a const reference to the constraint problem
-        const ConstraintsProblemDerivatives & constraints_problem() const
-        {
-            return pinocchio::helper::get_ref(this->m_constraints_problem);
-        }
-
-        /// \brief Returns a reference to the constraint problem
-        ConstraintsProblemDerivatives & constraints_problem()
-        {
-            return pinocchio::helper::get_ref(this->m_constraints_problem);
-        }
-
-        /// \brief Returns a handle to the constraint problem
-        ConstraintsProblemDerivativesHandle getConstraintsProblemDerivativesHandle() const
-        {
-            return this->m_constraints_problem;
+            return ::pinocchio::helper::get_ref(geom_data_);
         }
 
         SIMPLEX_PROTECTED
-        /// \brief Allocates memory based on `model` and active collision pairs in `geom_model`.
-        void allocate();
-
-        /// \brief Initializes the geometry data for broad and narrow phase collision detection.
-        void initializeGeometryData();
-
-        /// \brief Warm starting constraint forces via constraint inverse dynamics.
-        void warmStartConstraintForces();
-
+        ///
         /// \brief Collision detection
         void detectCollisions();
 
-        /// \brief Constraint resolution
-        virtual void preambleResolveConstraints(const Scalar dt)
+        ///
+        /// \brief Preambule function meant to be run before resolving collisions.
+        virtual void preambleResolveConstraints()
         {
-            PINOCCHIO_UNUSED_VARIABLE(dt);
         }
 
-        /** @brief Internal method to resolve numerical constraints using a specific solver. */
-        template<template<typename> class ConstraintSolver, typename VelocityVectorType>
-        void resolveConstraints(const Eigen::MatrixBase<VelocityVectorType> & v, const Scalar dt);
+        ///
+        /// \brief Constraint resolution
+        template<template<typename> class ConstraintSolver>
+        void resolveConstraints();
+    }; // struct SimulatorXTpl
+
+    ///
+    /// \brief Base struct to set up constraint solvers.
+    template<typename _Scalar>
+    struct ConstraintSolverConfigBaseTpl
+    {
+        using Scalar = _Scalar;
+
+        int max_iter{1000};
+        Scalar absolute_precision{1e-8};
+        Scalar relative_precision{1e-8};
+        bool stat_record{false};
+    };
+
+    ///
+    /// \brief Configuration of the ADMM constraint solver.
+    ///
+    /// \note Pinocchio's ADMM has two regularization term
+    /// -> tau * rho for the augmented lagrangian term (consensus penalty)
+    /// -> mu term for the proximal term (primal variable regularization)
+    ///
+    /// ADMM update rule: if ratio_primal_dual reached, rho *= rho_increment, where
+    /// rho_increment = pow(L/m, rho_power_factor).
+    ///
+    /// Initialization of rho:
+    /// -- If linear update rule   -> rho is initialized by ADMM constructor or `setRho`
+    /// -- If spectral update rule -> rho is initialized by ADMM `computeRho` = sqrt(L*m) * pow(L/m, rho_power)
+    ///
+    template<typename _Scalar>
+    struct ADMMConstraintSolverConfigTpl : ConstraintSolverConfigBaseTpl<_Scalar>
+    {
+        using Scalar = _Scalar;
+        using Base = ConstraintSolverConfigBaseTpl<_Scalar>;
+        using Base::absolute_precision;
+        using Base::max_iter;
+        using Base::relative_precision;
+        using Base::stat_record;
+
+        // Proximal term
+        Scalar mu_prox{1e-6};          // Value of proximal term used if mu_prox is not warm started
+        Scalar tau_prox{1};            // Linear scaling factor for mu_prox.
+        bool warmstart_mu_prox{false}; // Whether or not mu_prox should be warmstarted (using mu_prox of previous timestep).
+                                       // If true, then mu_prox_prev will be changed by the solver once `solve` has been called.
+        // REFACTOR this should not be in config
+        mutable Scalar mu_prox_prev{1e-6}; // Final value of mu_prox once `solve` has been called.
+                                           // When step is called, this is the value of the previous mu_prox.
+        // Augmented lagrangian rho term
+        Scalar rho{10};           // Initial value of rho for linear and constant update rule.
+        Scalar tau{1};            // linear scaling factor for rho.
+        bool warmstart_rho{true}; // Whether or not rho should be warmstarted (using rho of previous timestep).
+                                  // If true, then rho_prev will be changed by the solver once `solve` has been called.
+        // REFACTOR this should not be in config
+        mutable Scalar rho_prev{10}; // Final value of rho once `solve` has been called.
+                                     // When step is called, this is the value of the previous rho.
+        //
+        // Common to all admm update rules
+        int lanczos_size{10};         // Higher leads to more accurate eigvalues estimation. Max size = constraint problem size
+        Scalar rho_momentum{0};       // In [0, 1]. 0 is no momentum.
+        Scalar ratio_primal_dual{10}; // A new rho is computed when the primal dual ratio exceeds this threshold
+        int max_delassus_decomposition_updates{std::numeric_limits<int>::infinity()};
+        Scalar dual_momentum{0};         // In [0, 1], 0 is no momentum.
+        Scalar rho_update_ratio{0};      // Must be positive
+                                         // The rho update triggers when a new rho is computed and the rhos ratio exceeds this threshold
+        int rho_min_update_frequency{1}; // Wait this amount of iters to trigger a new rho update. Must be >= 1
+        std::size_t anderson_acceleration_capacity{0}; // Amount of history needed to trigger the anderson acceleration.
+                                                       // A history >= 2 will trigger the acceleration.
+        ::simplex::ADMMUpdateRule admm_update_rule{::simplex::ADMMUpdateRule::SPECTRAL};
+        //
+        // Spectral rule settings
+        Scalar rho_power{0.2};
+        Scalar rho_power_factor{0.05};
+        // Linear rule settings
+        Scalar linear_update_rule_factor{2};
+    };
+
+    ///
+    /// \brief Configuration of the PGS constraint solver.
+    template<typename _Scalar>
+    struct PGSConstraintSolverConfigTpl : ConstraintSolverConfigBaseTpl<_Scalar>
+    {
+        using Scalar = _Scalar;
+
+        Scalar over_relax{1.0};
+    };
+
+    ///
+    /// \brief Configuration of the Clarabel constraint solver.
+    template<typename _Scalar>
+    struct ClarabelConstraintSolverConfigTpl : ConstraintSolverConfigBaseTpl<_Scalar>
+    {
+        using Scalar = _Scalar;
+        using Base = ConstraintSolverConfigBaseTpl<_Scalar>;
+        using Base::absolute_precision;
+        using Base::max_iter;
+        using Base::relative_precision;
+        using Base::stat_record;
+
+        /// \brief Tolerance for feasibility checks
+        Scalar tol_feas{1e-8};
+
+        /// \brief Tolerance for KKT conditions
+        Scalar tol_ktratio{1e-8};
+
+        /// \brief Whether to enable verbose output
+        bool verbose{false};
     };
 
     namespace details
     {
-        /** @brief Internal dispatcher for the simulator's constraint solver. */
         template<template<typename> class SolverTpl, typename _Scalar, int _Options, template<typename, int> class JointCollectionTpl>
-        struct SimulatorConstraintSolverTpl
+        struct SimulatorXConstraintSolverTpl
         {
         };
 
-        /** @brief ADMM specialization of the dispatcher. */
         template<typename _Scalar, int _Options, template<typename, int> class JointCollectionTpl>
-        struct SimulatorConstraintSolverTpl<::pinocchio::ADMMContactSolverTpl, _Scalar, _Options, JointCollectionTpl>
+        struct SimulatorXConstraintSolverTpl<::simplex::ADMMContactSolverTpl, _Scalar, _Options, JointCollectionTpl>
         {
             using Scalar = _Scalar;
             enum
             {
                 Options = _Options
             };
-            using Simulator = SimulatorTpl<Scalar, Options, JointCollectionTpl>;
-            using ConstraintsProblem = typename Simulator::ConstraintsProblem;
-            using ADMMConstraintSolverSettings = typename Simulator::ADMMConstraintSolverSettings;
-            using ADMMConstraintSolver = ::pinocchio::ADMMContactSolverTpl<Scalar>;
+            using SimulatorX = SimulatorXTpl<Scalar, Options, JointCollectionTpl>;
+            using SimulatorState = typename SimulatorX::SimulatorState;
+            using ConstraintsProblemDerivatives = typename SimulatorX::ConstraintsProblemDerivatives;
+            using ADMMConstraintSolver = typename SimulatorX::ADMMConstraintSolver;
+            using ADMMConstraintSolverConfig = typename SimulatorX::ADMMConstraintSolverConfig;
 
-            using MatrixXs = typename Simulator::MatrixXs;
-            using VectorXs = typename Simulator::VectorXs;
+            using MatrixXs = typename SimulatorX::MatrixXs;
+            using VectorXs = typename SimulatorX::VectorXs;
             using RefConstVectorXs = Eigen::Ref<const VectorXs>;
+            using DelassusType = typename ConstraintsProblemDerivatives::DelassusType;
 
-            static void run(Simulator & simulator, Scalar dt);
+            static void run(SimulatorX & simulator);
 
             SIMPLEX_PROTECTED
-            static void setup(Simulator & simulator);
+            static void setup(SimulatorX & simulator);
         };
 
-        /** @brief PGS specialization of the dispatcher. */
         template<typename _Scalar, int _Options, template<typename, int> class JointCollectionTpl>
-        struct SimulatorConstraintSolverTpl<::pinocchio::PGSContactSolverTpl, _Scalar, _Options, JointCollectionTpl>
+        struct SimulatorXConstraintSolverTpl<::pinocchio::PGSContactSolverTpl, _Scalar, _Options, JointCollectionTpl>
         {
             using Scalar = _Scalar;
             enum
             {
                 Options = _Options
             };
-            using Simulator = SimulatorTpl<Scalar, Options, JointCollectionTpl>;
-            using ConstraintsProblem = typename Simulator::ConstraintsProblem;
-            using PGSConstraintSolverSettings = typename Simulator::PGSConstraintSolverSettings;
-            using PGSConstraintSolver = ::pinocchio::PGSContactSolverTpl<Scalar>;
+            using SimulatorX = SimulatorXTpl<Scalar, Options, JointCollectionTpl>;
+            using SimulatorState = typename SimulatorX::SimulatorState;
+            using ConstraintsProblemDerivatives = typename SimulatorX::ConstraintsProblemDerivatives;
+            using PGSConstraintSolver = typename SimulatorX::PGSConstraintSolver;
+            using PGSConstraintSolverConfig = typename SimulatorX::PGSConstraintSolverConfig;
             using DelassusOperatorDense = ::pinocchio::DelassusOperatorDenseTpl<Scalar>;
 
-            using MatrixXs = typename Simulator::MatrixXs;
-            using VectorXs = typename Simulator::VectorXs;
+            using MatrixXs = typename SimulatorX::MatrixXs;
+            using VectorXs = typename SimulatorX::VectorXs;
             using RefConstVectorXs = Eigen::Ref<const VectorXs>;
+            using DelassusType = typename ConstraintsProblemDerivatives::DelassusType;
 
-            static void run(Simulator & simulator, Scalar dt);
+            static void run(SimulatorX & simulator);
 
             SIMPLEX_PROTECTED
-            static void setup(Simulator & simulator);
+            static void setup(SimulatorX & simulator);
         };
+
+#ifdef SIMPLEX_WITH_CLARABEL_SUPPORT
+        template<typename _Scalar, int _Options, template<typename, int> class JointCollectionTpl>
+        struct SimulatorXConstraintSolverTpl<::simplex::ClarabelContactSolverTpl, _Scalar, _Options, JointCollectionTpl>
+        {
+            using Scalar = _Scalar;
+            enum
+            {
+                Options = _Options
+            };
+            using SimulatorX = SimulatorXTpl<Scalar, Options, JointCollectionTpl>;
+            using SimulatorState = typename SimulatorX::SimulatorState;
+            using ConstraintsProblemDerivatives = typename SimulatorX::ConstraintsProblemDerivatives;
+            using ClarabelConstraintSolver = ::simplex::ClarabelContactSolverTpl<Scalar, Options>;
+            using ClarabelConstraintSolverConfig = typename SimulatorX::ClarabelConstraintSolverConfig;
+
+            using MatrixXs = typename SimulatorX::MatrixXs;
+            using VectorXs = typename SimulatorX::VectorXs;
+            using RefConstVectorXs = Eigen::Ref<const VectorXs>;
+            using DelassusType = typename ConstraintsProblemDerivatives::DelassusType;
+
+            static void run(SimulatorX & simulator);
+
+            SIMPLEX_PROTECTED
+            static void setup(SimulatorX & simulator);
+        };
+#endif // SIMPLEX_WITH_CLARABEL_SUPPORT
+
     } // namespace details
 } // namespace simplex
 
-#include "simplex/core/simulator.hxx"
+#include "simplex/core/simulator-x.hxx"
 
 #if SIMPLEX_ENABLE_TEMPLATE_INSTANTIATION
-    #include "simplex/core/simulator.txx"
+    #include "simplex/core/simulator-x.txx"
     #include "simplex/pinocchio_template_instantiation/aba.txx"
     #include "simplex/pinocchio_template_instantiation/joint-model.txx"
     #include "simplex/pinocchio_template_instantiation/crba.txx"

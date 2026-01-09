@@ -43,9 +43,9 @@ namespace simplex
         using ContactPatchResult = ::coal::ContactPatchResult;
         using ContactPatch = ::coal::ContactPatch;
 
-        using GeomIndex = typename ContactSolverDerivatives::GeomIndex;
-        using ContactIndex = typename ContactSolverDerivatives::ContactIndex;
-        using JointIndex = typename ContactSolverDerivatives::JointIndex;
+        using GeomIndex = typename ConstraintsProblemDerivatives::GeomIndex;
+        using ContactIndex = typename ConstraintsProblemDerivatives::ContactIndex;
+        using JointIndex = typename ConstraintsProblemDerivatives::JointIndex;
 
         using VectorXs = typename ContactSolverDerivatives::VectorXs;
         using Vector3s = typename ContactSolverDerivatives::Vector3s;
@@ -181,17 +181,7 @@ namespace simplex
         SIMPLEX_PUBLIC
         ///
         /// \brief Default constructor
-        SimulatorDerivativesTpl(const SimulatorX & simulator)
-        : measure_timings(false)
-        , contact_solver_derivatives(simulator.workspace.getConstraintProblemHandle())
-#ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
-        , patch_derivative_requests(simulator.geom_model().collisionPairs.size())
-        , patch_derivatives(simulator.geom_model().collisionPairs.size())
-#endif
-        , timer_(false)
-        {
-            allocate(simulator);
-        }
+        explicit SimulatorDerivativesTpl(const SimulatorX & simulator);
 
         ///
         /// \brief Computes Jacobian of the step function wrt q, v and tau.
@@ -310,8 +300,8 @@ namespace simplex
 
 #if SIMPLEX_ENABLE_TEMPLATE_INSTANTIATION
     #include "simplex/core/simulator-derivatives.txx"
-    #include "simplex/pinocchio_template_instantiation/joint-model-inst.hpp"
-    #include "simplex/pinocchio_template_instantiation/aba-derivatives-inst.hpp"
+    #include "simplex/pinocchio_template_instantiation/joint-model.txx"
+    #include "simplex/pinocchio_template_instantiation/aba-derivatives.txx"
 #endif
 
 #endif // ifndef __simplex_core_simulator_derivatives_hpp__

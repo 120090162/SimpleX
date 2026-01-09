@@ -53,6 +53,7 @@ namespace simplex
 
         ///
         dM_dnormal.setZero();
+        using Block3 = Eigen::Block<Matrix6x3Type1, 3, 3>;
         Block3 dM_dnormal_angular = dM_dnormal.template bottomRows<3>();
         dM_dnormal_angular.row(0) = -M.rotation().col(1);
         dM_dnormal_angular.row(1) = M.rotation().col(0);

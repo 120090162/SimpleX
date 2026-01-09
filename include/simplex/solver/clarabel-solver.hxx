@@ -33,20 +33,22 @@ namespace simplex
             using Vector3s = Eigen::Matrix<Scalar, 3, 1>;
             using pinocchio::helper::get_ref;
 
+            PINOCCHIO_UNUSED_VARIABLE(constraint_datas);
+
             VectorOutLike & shift = shift_.const_cast_derived();
             const auto nc = static_cast<Eigen::Index>(constraint_models.size());
             Eigen::Index idx = 0;
             for (Eigen::Index i = 0; i < nc /*num constraints*/; ++i)
             {
                 const auto & cmodel = get_ref(constraint_models[static_cast<std::size_t>(i)]);
-                const auto & cdata = get_ref(constraint_datas[static_cast<std::size_t>(i)]);
-                using ContactModel = ::pinocchio::PointContactConstraintModelTpl<Scalar, Options>;
-                using ContactData = ::pinocchio::PointContactConstraintDataTpl<Scalar, Options>;
+                // const auto & cdata = get_ref(constraint_datas[static_cast<std::size_t>(i)]);
+                using ContactModel = ::pinocchio::FrictionalPointConstraintModelTpl<Scalar, Options>;
+                // using ContactData = ::pinocchio::FrictionalPointConstraintDataTpl<Scalar, Options>;
 
                 if (const ContactModel * fpc_model = boost::get<const ContactModel>(&cmodel))
                 {
-                    const ContactData * fpc_data = boost::get<const ContactData>(&cdata);
-                    const Scalar mu = fpc_model->set(*fpc_data).mu;
+                    // const ContactData * fpc_data = boost::get<const ContactData>(&cdata);
+                    const Scalar mu = fpc_model->set().mu;
                     const Scalar vt_norm = velocity.template segment<2>(idx + 1).norm();
                     shift.template segment<3>(idx) = Vector3s(mu * vt_norm, 0, 0);
                     idx += 3;
@@ -66,7 +68,7 @@ namespace simplex
         const Eigen::MatrixBase<VectorLike> & g,
         const std::vector<std::reference_wrapper<const ::pinocchio::ConstraintModelTpl<Scalar, Options>>, ConstraintModelAllocator> &
             constraint_models,
-        const std::vector<std::reference_wrapper<const ::pinocchio::ConstraintDataTpl<Scalar, Options>>, ConstraintDataAllocator> &
+        const std::vector<std::reference_wrapper<::pinocchio::ConstraintDataTpl<Scalar, Options>>, ConstraintDataAllocator> &
             constraint_datas,
         const boost::optional<Eigen::Ref<const VectorXs>> & preconditioner,
         const boost::optional<Eigen::Ref<const VectorXs>> & primal_guess,
@@ -74,6 +76,8 @@ namespace simplex
         bool is_ncp,
         bool record_stats)
     {
+        PINOCCHIO_UNUSED_VARIABLE(constraint_datas);
+
         assert(g.size() == problem_size_ && "Drift vector size mismatch");
 
         // Resize solution vectors if needed
@@ -132,12 +136,12 @@ namespace simplex
         {
             const auto & cmodel = constraint_models[static_cast<std::size_t>(i)].get();
             const auto & cdata = constraint_datas[static_cast<std::size_t>(i)].get();
-            using ConstraintModel = ::pinocchio::PointContactConstraintModelTpl<Scalar, Options>;
-            using ConstraintData = ::pinocchio::PointContactConstraintDataTpl<Scalar, Options>;
+            using ConstraintModel = ::pinocchio::FrictionalPointConstraintModelTpl<Scalar, Options>;
+            // using ConstraintData = ::pinocchio::FrictionalPointConstraintDataTpl<Scalar, Options>;
             if (const ConstraintModel * fpc_model = boost::get<const ConstraintModel>(&cmodel))
             {
-                const ConstraintData * fpc_data = boost::get<const ConstraintData>(&cdata);
-                frictions.template segment<3>(3 * i) = -Vector3s(fpc_model->set(*fpc_data).mu, 1, 1);
+                // const ConstraintData * fpc_data = boost::get<const ConstraintData>(&cdata);
+                frictions.template segment<3>(3 * i) = -Vector3s(fpc_model->set().mu, 1, 1);
                 cones.emplace_back(clarabel::SecondOrderConeT<Scalar>(3));
             }
             else

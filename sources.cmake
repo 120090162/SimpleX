@@ -15,10 +15,14 @@ set(${PROJECT_NAME}_CORE_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/simplex/core/ncp-derivatives.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-derivatives.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-derivatives.hxx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-x.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-x.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/math/fwd.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/math/qr.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/solver/admm-solver.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/solver/admm-solver.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/solver/clarabel-solver.hpp
     ${PROJECT_SOURCE_DIR}/include/simplex/solver/clarabel-solver.hxx
     ${PROJECT_SOURCE_DIR}/include/simplex/utils/logger.hpp
@@ -38,9 +42,10 @@ set(${PROJECT_NAME}_TEMPLATE_INSTANTIATION_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/simplex/core/constraints-problem.txx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/ncp-derivatives.txx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-derivatives.txx
+    ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator-x.txx
     ${PROJECT_SOURCE_DIR}/include/simplex/core/simulator.txx)
 
-set(${PROJECT_NAME}_TEMPLATE_INSTANTIATION_SOURCES core/constraints-problem-derivatives.cpp core/constraints-problem.cpp core/ncp-derivatives.cpp core/simulator-derivatives.cpp core/simulator.cpp)
+set(${PROJECT_NAME}_TEMPLATE_INSTANTIATION_SOURCES core/constraints-problem-derivatives.cpp core/constraints-problem.cpp core/ncp-derivatives.cpp core/simulator-derivatives.cpp core/simulator-x.cpp core/simulator.cpp)
 
 # --- Pinocchio template instantiation ---
 set(${PROJECT_NAME}_PINOCCHIO_TEMPLATE_INSTANTIATION_SOURCES

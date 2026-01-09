@@ -831,6 +831,7 @@ namespace simplex
         assert(this->constraint_models.size() == num_constraints);
         assert(this->constraint_datas.size() == num_constraints);
         const auto problem_size = static_cast<Eigen::Index>(this->constraints_problem_size());
+        PINOCCHIO_UNUSED_VARIABLE(problem_size);
         assert(
             (this->m_g.size() == this->m_constraints_velocities_warmstarts.size()) //
             && "g and constraint should always have the same (maximum) size.");

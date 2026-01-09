@@ -7,6 +7,21 @@
 
 namespace simplex
 {
+    // ==========================================================================
+    template<typename S, int O, template<typename, int> class JointCollectionTpl>
+    ContactSolverDerivativesTpl<S, O, JointCollectionTpl>::ContactSolverDerivativesTpl(
+        ConstraintsProblemDerivativesHandle constraint_problem)
+    : measure_timings(false)
+    , implicit_gradient_solver_type(ImplicitGradientSystemSolver::COD) // COD by default, more stable
+    , constraint_problem_(constraint_problem)
+    , timer_(false)
+    , cod_solver_(nullptr)
+    , qr_solver_(nullptr)
+    {
+        max_theta_dim_ = 3 * constraint_problem->model().nv;
+        allocate();
+    }
+
     // --------------------------------------------------------------------------
     template<typename S, int O, template<typename, int> class JointCollectionTpl>
     void ContactSolverDerivativesTpl<S, O, JointCollectionTpl>::allocate()

@@ -1,6 +1,4 @@
 #include "simplex/core/simulator-derivatives.hpp"
-#include "simplex/pinocchio_template_instantiation/joint-model-inst.hpp"
-#include "simplex/pinocchio_template_instantiation/aba-derivatives-inst.hpp"
 
 namespace simplex
 {
