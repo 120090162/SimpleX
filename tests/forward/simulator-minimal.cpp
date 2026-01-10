@@ -1,6 +1,6 @@
 #include "simplex/core/simulator.hpp"
-#include <pinocchio/algorithm/fwd.hpp>
 
+#include <pinocchio/algorithm/fwd.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 #include <pinocchio/parsers/srdf.hpp>
 #include <pinocchio/parsers/sample-models.hpp>

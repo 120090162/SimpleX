@@ -24,8 +24,7 @@ int custom_callback(DefaultInfo<double> & info, void * userdata)
     // You can use it to monitor the progress of the solver or
     // to implement custom stopping criteria.
     // For example, we can print the current iteration number:
-    printf("Custom callback at iteration %d: ", info.iterations);
-    std::cout << simplex::logging::INFO << "Custom callback at iteration" << info.iterations << ": ";
+    std::cout << simplex::logging::DEBUG << "Custom callback at iteration" << info.iterations << ": ";
     // Cast the userdata pointer back to our struct type
     int count = 0;
     if (userdata != nullptr)
