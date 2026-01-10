@@ -67,10 +67,11 @@ cmake .. \
     -DPYTHON_EXECUTABLE=$(which python)
 
 make -j4 2>&1 | tee build.log
+make install # update the libsimplex.so file
 ctest # ctest -V
 
 # [optional] benchmark
-conda install -c conda-forge google-benchmark -y
+conda install -c conda-forge benchmark -y
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
     -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
@@ -79,6 +80,7 @@ cmake .. \
     -BUILD_BENCHMARKS=ON \
     -DPYTHON_EXECUTABLE=$(which python)
 make -j4 2>&1 | tee build.log
+make install # update the libsimplex.so file
 ./benchmarks/affine-transform
 ```
 

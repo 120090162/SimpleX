@@ -10,6 +10,9 @@
 #include <boost/utility/binary.hpp>
 #include <memory>
 
+#include <fstream>
+#include <nlohmann/json.hpp>
+
 #include "../test-utils.hpp"
 
 using namespace simplex;
@@ -18,9 +21,25 @@ using ModelHandle = SimulatorX::ModelHandle;
 using DataHandle = SimulatorX::DataHandle;
 using GeometryModelHandle = SimulatorX::GeometryModelHandle;
 using GeometryDataHandle = SimulatorX::GeometryDataHandle;
+
+using json = nlohmann::json;
+
 #define ADMM ::simplex::ADMMContactSolverTpl
+#define PGS ::pinocchio::PGSContactSolverTpl
+#define Clarabel ::simplex::ClarabelContactSolverTpl
 
 BOOST_AUTO_TEST_SUITE(BOOST_TEST_MODULE)
+
+BOOST_AUTO_TEST_CASE(simulator_derivatives_read_json_config)
+{
+    json j;
+    std::ifstream jfile(findTestResource("SIMPLEX/tests/config/derivatives-simulator.json"));
+    jfile >> j;
+    BOOST_CHECK(j.contains("pi"));
+    BOOST_CHECK(j.contains("happy"));
+    BOOST_CHECK_EQUAL(j["pi"].get<float>(), float(3.1415));
+    BOOST_CHECK_EQUAL(j["happy"].get<bool>(), true);
+}
 
 BOOST_AUTO_TEST_CASE(simulator_derivatives_constructor)
 {
@@ -40,7 +59,8 @@ void computeStepDerivativesFD(
     Eigen::MatrixXd & dvnew_dv_fd,
     Eigen::MatrixXd & dvnew_dtau_fd)
 {
-    sim_fd.step<ADMM>(q, v, tau, dt);
+    sim_fd.step<PGS>(q, v, tau, dt);
+    // sim_fd.step<ADMM>(q, v, tau, dt);
     Eigen::VectorXd vnew = sim_fd.state.vnew;
     double delta = 1e-6;
     // finite differences on q
@@ -51,7 +71,8 @@ void computeStepDerivativesFD(
         Eigen::VectorXd dq = Eigen::VectorXd::Zero(sim_fd.model().nv);
         dq(colid) = delta;
         qplus = pinocchio::integrate(sim_fd.model(), q, dq);
-        sim_fd.step<ADMM>(qplus, v, tau, dt);
+        sim_fd.step<PGS>(qplus, v, tau, dt);
+        // sim_fd.step<ADMM>(qplus, v, tau, dt);
         dvnew_dq_fd.col(colid) = (sim_fd.state.vnew - vnew) / delta;
     }
     // finite differences on v
@@ -62,7 +83,8 @@ void computeStepDerivativesFD(
         Eigen::VectorXd dv = Eigen::VectorXd::Zero(sim_fd.model().nv);
         dv(colid) = delta;
         vplus = v + dv;
-        sim_fd.step<ADMM>(q, vplus, tau, dt);
+        sim_fd.step<PGS>(q, vplus, tau, dt);
+        // sim_fd.step<ADMM>(q, vplus, tau, dt);
         dvnew_dv_fd.col(colid) = (sim_fd.state.vnew - vnew) / delta;
 
         // sim_fd.workspace.workspace.constraint_problem().collectActiveSet();
@@ -89,7 +111,8 @@ void computeStepDerivativesFD(
         Eigen::VectorXd dtau = Eigen::VectorXd::Zero(sim_fd.model().nv);
         dtau(colid) = delta;
         tauplus = tau + dtau;
-        sim_fd.step<ADMM>(q, v, tauplus, dt);
+        sim_fd.step<PGS>(q, v, tauplus, dt);
+        // sim_fd.step<ADMM>(q, v, tauplus, dt);
         dvnew_dtau_fd.col(colid) = (sim_fd.state.vnew - vnew) / delta;
     }
 }
@@ -108,7 +131,8 @@ void computeLambdaDerivativesFD(
     // finite differences. The implementation is very naive (even wrong in general) as it assumes that
     // the contact points remain the same
     sim_fd.reset();
-    sim_fd.step<ADMM>(q, v, tau, dt);
+    sim_fd.step<PGS>(q, v, tau, dt);
+    // sim_fd.step<ADMM>(q, v, tau, dt);
     Eigen::VectorXd lam = sim_fd.workspace.constraint_problem().frictional_point_constraints_forces();
     double delta = 1e-6;
     // finite differences on q
@@ -120,7 +144,8 @@ void computeLambdaDerivativesFD(
         Eigen::VectorXd dq = Eigen::VectorXd::Zero(sim_fd.model().nv);
         dq(colid) = delta;
         qplus = pinocchio::integrate(sim_fd.model(), q, dq);
-        sim_fd.step<ADMM>(qplus, v, tau, dt);
+        sim_fd.step<PGS>(qplus, v, tau, dt);
+        // sim_fd.step<ADMM>(qplus, v, tau, dt);
         dlam_dq_fd.col(colid) = (sim_fd.workspace.constraint_problem().frictional_point_constraints_forces() - lam) / delta;
         sim_fd.reset();
     }
@@ -132,7 +157,8 @@ void computeLambdaDerivativesFD(
         Eigen::VectorXd dv = Eigen::VectorXd::Zero(sim_fd.model().nv);
         dv(colid) = delta;
         vplus = v + dv;
-        sim_fd.step<ADMM>(q, vplus, tau, dt);
+        sim_fd.step<PGS>(q, vplus, tau, dt);
+        // sim_fd.step<ADMM>(q, vplus, tau, dt);
         dlam_dv_fd.col(colid) = (sim_fd.workspace.constraint_problem().frictional_point_constraints_forces() - lam) / delta;
 
         // sim_fd.workspace.constraint_problem().collectActiveSet();
@@ -160,7 +186,8 @@ void computeLambdaDerivativesFD(
         Eigen::VectorXd dtau = Eigen::VectorXd::Zero(sim_fd.model().nv);
         dtau(colid) = delta;
         tauplus = tau + dtau;
-        sim_fd.step<ADMM>(q, v, tauplus, dt);
+        sim_fd.step<PGS>(q, v, tauplus, dt);
+        // sim_fd.step<ADMM>(q, v, tauplus, dt);
         dlam_dtau_fd.col(colid) = (sim_fd.workspace.constraint_problem().frictional_point_constraints_forces() - lam) / delta;
         sim_fd.reset();
     }
@@ -208,7 +235,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_ball_plane)
     Eigen::VectorXd v = Eigen::VectorXd::Zero(model->nv);
     Eigen::VectorXd tau = Eigen::VectorXd::Zero(model->nv);
     const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     Eigen::VectorXd qnew = sim.state.qnew;
     Eigen::VectorXd vnew = sim.state.vnew;
 
@@ -263,7 +291,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_ball_plane)
 
     // testing sliding mode
     v(0) = 1;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     qnew = sim.state.qnew;
     vnew = sim.state.vnew;
 
@@ -333,7 +362,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_ball_plane_gd)
     costs.reserve(max_gd_iters + 1);
 
     // Run initial step to get starting contact forces
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     Eigen::VectorXd contact_forces = sim.workspace.constraint_problem().frictional_point_constraints_forces();
     costs.push_back(0.5 * contact_forces.squaredNorm());
 
@@ -349,7 +379,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_ball_plane_gd)
         // gradient descent update on tau
         tau -= gd_step_size * grad;
         // step simulator with updated tau and read new contact forces
-        sim.step<ADMM>(q, v, tau, dt);
+        sim.step<PGS>(q, v, tau, dt);
+        // sim.step<ADMM>(q, v, tau, dt);
         contact_forces = sim.workspace.constraint_problem().frictional_point_constraints_forces();
         const double cost = 0.5 * contact_forces.squaredNorm();
         costs.push_back(cost);
@@ -403,7 +434,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_ball_plane_with_compliance)
     Eigen::VectorXd v = Eigen::VectorXd::Zero(model->nv);
     Eigen::VectorXd tau = Eigen::VectorXd::Zero(model->nv);
     const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     Eigen::VectorXd qnew = sim.state.qnew;
     Eigen::VectorXd vnew = sim.state.vnew;
 
@@ -458,7 +490,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_ball_plane_with_compliance)
 
     // testing sliding mode
     v(0) = 1;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     qnew = sim.state.qnew;
     vnew = sim.state.vnew;
 
@@ -532,7 +565,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_balls_plane)
     Eigen::VectorXd v = Eigen::VectorXd::Zero(model->nv);
     Eigen::VectorXd tau = Eigen::VectorXd::Zero(model->nv);
     const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     Eigen::VectorXd qnew = sim.state.qnew;
     Eigen::VectorXd vnew = sim.state.vnew;
 
@@ -568,7 +602,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_balls_plane)
 
     // testing sliding mode
     v(0) = 1;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     qnew = sim.state.qnew;
     vnew = sim.state.vnew;
 
@@ -636,7 +671,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_colliding_balls)
     v(0) = 1.0;
     Eigen::VectorXd tau = Eigen::VectorXd::Zero(model->nv);
     const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     Eigen::VectorXd qnew = sim.state.qnew;
     Eigen::VectorXd vnew = sim.state.vnew;
 
@@ -685,7 +721,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_colliding_balls)
     // testing sliding mode
     v(0) = 0.1;
     v(1) = 1;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     qnew = sim.state.qnew;
     vnew = sim.state.vnew;
 
@@ -733,7 +770,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_colliding_balls)
     v(1) = 1;
     v(6) = 10;
     v(7) = -10;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     qnew = sim.state.qnew;
     vnew = sim.state.vnew;
 
@@ -812,14 +850,16 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_cube_plane)
     Eigen::VectorXd v = Eigen::VectorXd::Zero(model->nv);
     Eigen::VectorXd tau = Eigen::VectorXd::Zero(model->nv);
     const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     SimulatorDerivatives dsim(sim);
     dsim.stepDerivatives(sim, q, v, tau, dt);
 
     // testing sliding mode
     q(2) = (r / 2.) * 0.8;
     v(0) = 1;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     dsim.stepDerivatives(sim, q, v, tau, dt);
 }
 
@@ -872,7 +912,8 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_cubes_plane)
     v(1) = 3;
     Eigen::VectorXd tau = Eigen::VectorXd::Zero(model->nv);
     const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
+    sim.step<PGS>(q, v, tau, dt);
+    // sim.step<ADMM>(q, v, tau, dt);
     SimulatorDerivatives dsim(sim);
     dsim.stepDerivatives(sim, q, v, tau, dt);
 }

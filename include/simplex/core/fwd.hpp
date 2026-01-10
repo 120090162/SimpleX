@@ -72,7 +72,7 @@ namespace simplex
     /** @brief Default Simulator using context types. */
     typedef SimulatorTpl<context::Scalar, context::Options> Simulator;
 
-    /** @brief Default Simulator using context types. */
+    /** @brief Default SimulatorX using context types. */
     typedef SimulatorXTpl<context::Scalar, context::Options> SimulatorX;
 
     /** @brief Default ContactSolverDerivatives using context types. */

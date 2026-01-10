@@ -134,7 +134,7 @@ endif(APPLE)
 
 option(INITIALIZE_WITH_NAN "Initialize Eigen entries with NaN" OFF)
 option(CHECK_RUNTIME_MALLOC "Check if some memory allocations are performed at runtime" OFF)
-option(ENABLE_TEMPLATE_INSTANTIATION "Template instantiation of the main library" OFF) # may have some issues
+option(ENABLE_TEMPLATE_INSTANTIATION "Template instantiation of the main library" ON)
 option(SIMPLEX_DOWNLOAD_TRACY "Use FetchContent to install Tracy." OFF)
 
 set(CFLAGS_OPTIONS)
