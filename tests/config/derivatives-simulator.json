@@ -1,4 +1,5 @@
 {
-    "pi": 3.1415,
-    "happy": true
+    "ContactSolver": {
+        "type": "admm"
+    }
 }

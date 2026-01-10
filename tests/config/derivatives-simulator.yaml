@@ -1,0 +1,4 @@
+ContactSolver:
+  # - type: admm
+  # - type: pgs
+  - type: clarabel

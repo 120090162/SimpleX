@@ -486,7 +486,8 @@ namespace simplex
 #undef SOLVE_CONSTRAINT_PROBLEM
 
             // Get solution of the solver
-            constraint_problem.constraint_forces.array() = admm_solver.getPrimalSolution().array() / simulator.state.dt;
+            constraint_problem.constraint_forces.array() = admm_solver.getPrimalSolution().array();
+            // constraint_problem.constraint_forces.array() = admm_solver.getPrimalSolution().array() / simulator.state.dt;
             // Get constraint velocities
             constraint_problem.constraint_velocities = admm_solver.getDualSolution();
             if (constraint_problem.is_ncp)
@@ -621,7 +622,8 @@ namespace simplex
                 pgs_config.stat_record);
 
             // Get solution of the solver
-            constraint_problem.constraint_forces.array() = pgs_solver.getPrimalSolution().array() / simulator.state.dt;
+            // constraint_problem.constraint_forces.array() = pgs_solver.getPrimalSolution().array() / simulator.state.dt;
+            constraint_problem.constraint_forces.array() = pgs_solver.getPrimalSolution().array();
             // Get constraint velocities
             constraint_problem.constraint_velocities = pgs_solver.getDualSolution();
 

@@ -50,7 +50,7 @@ function(ADD_SIMPLEX_UNIT_TEST name)
 endfunction()
 
 # add json library
-include_directories(${PROJECT_SOURCE_DIR}/third_party/nlohmann)
+include_directories(${PROJECT_SOURCE_DIR}/third_party/include)
 
 # CPP test
 add_subdirectory(derivatives)
