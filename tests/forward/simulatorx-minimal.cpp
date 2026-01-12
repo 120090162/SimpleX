@@ -14,148 +14,194 @@
 #include "../test-utils.hpp"
 
 using namespace simplex;
-using namespace pinocchio;
-using ModelHandle = SimulatorX::ModelHandle;
-using DataHandle = SimulatorX::DataHandle;
-using GeometryModelHandle = SimulatorX::GeometryModelHandle;
-using GeometryDataHandle = SimulatorX::GeometryDataHandle;
+namespace pin = pinocchio;
+
 using BilateralPointConstraintModel = SimulatorX::BilateralPointConstraintModel;
 using BilateralPointConstraintModelVector = SimulatorX::BilateralPointConstraintModelVector;
+using WeldConstraintModel = SimulatorX::WeldConstraintModel;
+using WeldConstraintModelVector = SimulatorX::WeldConstraintModelVector;
 
 using VectorXd = Eigen::VectorXd;
-
-#define ADMM ::simplex::ADMMContactSolverTpl
-#define PGS ::pinocchio::PGSContactSolverTpl
-#define Clarabel ::simplex::ClarabelContactSolverTpl
+using MatrixXd = Eigen::MatrixXd;
 
 BOOST_AUTO_TEST_SUITE(BOOST_TEST_MODULE)
 
-BOOST_AUTO_TEST_CASE(humanoid_with_point_anchor_constraint)
+BOOST_AUTO_TEST_CASE(humanoid_with_point_anchor_constraint_minimal)
 {
     // Construct humanoid
-    ModelHandle model(new pin::Model());
-    pin::buildModels::humanoid(*model, true);
-    model->lowerPositionLimit = VectorXd::Constant(model->nq, -1.0) * std::numeric_limits<double>::max();
-    model->upperPositionLimit = VectorXd::Constant(model->nq, 1.0) * std::numeric_limits<double>::max();
-    DataHandle data = std::make_shared<pin::Data>(*model);
-
-    GeometryModelHandle geom_model(new pin::GeometryModel());
+    pin::Model model;
+    pin::buildModels::humanoid(model, true);
+    pin::Data data(model);
 
     // Initial state
-    VectorXd q = pinocchio::neutral(*model);
+    VectorXd q = pin::neutral(model);
+    VectorXd v = VectorXd::Zero(model.nv);
+    VectorXd tau = VectorXd::Zero(model.nv);
+    const double dt = 1e-3;
+
+    // Compute vfree and crba for G and g.
+    // Also populate data with the system's current state
+    pin::crba(model, data, q, pin::Convention::WORLD);
+    const VectorXd v_free = dt * pin::aba(model, data, q, v, tau, pin::Convention::WORLD);
+    data.q_in = q;
+    data.v_in = v;
+    data.tau_in = tau;
 
     // Point anchor constraint on the robot right wrist
-    BilateralPointConstraintModelVector point_anchor_constraint_models;
-    pinocchio::framesForwardKinematics(*model, *data, q);
+    pin::forwardKinematics(model, data, q);
     const pin::JointIndex joint1_id = 0;
-    const pin::GeomIndex joint2_id = 13;
-    ::pinocchio::SE3 Mc = data->oMi[joint2_id];
+    const pin::GeomIndex joint2_id = 14;
+    assert((int)joint2_id < model.njoints);
+    assert(model.nvs[joint2_id] == 1); // make sure its a bilaterable joint
+    pin::SE3 Mc = data.oMi[joint2_id];
     const pin::SE3 joint1_placement = Mc;
     const pin::SE3 joint2_placement = pin::SE3::Identity();
-    point_anchor_constraint_models.push_back(
-        BilateralPointConstraintModel(*model, joint1_id, joint1_placement, joint2_id, joint2_placement));
-    point_anchor_constraint_models[0].baumgarte_corrector_parameters().Kp = 0.1;
 
-    // The humanoid's freeflyer's height should remain the same
-    SimulatorX sim(model, geom_model);
-    sim.addPointAnchorConstraints(point_anchor_constraint_models);
-    sim.config.constraint_solvers_configs.admm_config.absolute_precision = 1e-9;
-    sim.config.constraint_solvers_configs.admm_config.relative_precision = 1e-9;
-    sim.config.constraint_solvers_configs.admm_config.max_iter = 1000;
-    const double dt = 1e-3;
-    VectorXd v = VectorXd::Zero(model->nv);
-    VectorXd tau = VectorXd::Zero(model->nv);
-    BOOST_CHECK_NO_THROW(sim.step<ADMM>(q, v, tau, dt));
-    pinocchio::framesForwardKinematics(*model, *data, sim.state.qnew);
-    EIGEN_VECTOR_IS_APPROX(Mc.translation(), data->oMi[joint2_id].translation(), 1e-3);
-
-    // Calling the simulator twice to test warmstart
-    sim.step<ADMM>(q, v, tau, dt);
-    INDEX_EQUALITY_CHECK(sim.workspace.constraint_solvers.admm_solver.getIterationCount(), 0);
-
-    for (int i = 0; i < 10; ++i)
+    using ConstraintModel = BilateralPointConstraintModel;
+    using ConstraintData = typename ConstraintModel::ConstraintData;
+    std::vector<ConstraintModel> constraint_models;
+    std::vector<ConstraintData> constraint_datas;
+    ConstraintModel cm(model, joint1_id, joint1_placement, joint2_id, joint2_placement);
+    constraint_models.push_back(cm);
+    constraint_datas.push_back(cm.createData());
+    for (std::size_t i = 0; i < constraint_models.size(); ++i)
     {
-        VectorXd q = sim.state.qnew;
-        VectorXd v = sim.state.vnew;
-        BOOST_CHECK_NO_THROW(sim.step<ADMM>(q, v, tau, dt));
-        pinocchio::framesForwardKinematics(*model, *data, sim.state.qnew);
-        EIGEN_VECTOR_IS_APPROX(Mc.translation(), data->oMi[joint2_id].translation(), 1e-3);
+        constraint_models[i].calc(model, data, constraint_datas[i]);
     }
+    const Eigen::DenseIndex constraint_size = pin::getTotalConstraintActiveSize(constraint_models);
+
+    // Delassus
+    pin::ContactCholeskyDecomposition chol(model, constraint_models);
+    chol.compute(model, data, constraint_models, constraint_datas, 1e-10);
+
+    // Solve constraint
+    const MatrixXd delassus = chol.getDelassusCholeskyExpression().matrix();
+    const pin::DelassusOperatorDense G(delassus);
+
+    BOOST_CHECK(delassus.rows() == constraint_size);
+    MatrixXd constraint_jacobian(delassus.rows(), model.nv);
+    constraint_jacobian.setZero();
+    getConstraintsJacobian(model, data, constraint_models, constraint_datas, constraint_jacobian);
+
+    const VectorXd g = constraint_jacobian * v_free;
+
+    pin::PGSContactSolver pgs_solver(std::size_t(delassus.rows()));
+    pgs_solver.setAbsolutePrecision(1e-10);
+    pgs_solver.setRelativePrecision(1e-14);
+    pgs_solver.setMaxIterations(1000);
+    BOOST_CHECK(constraint_size == delassus.rows());
+
+    VectorXd primal_solution = VectorXd::Zero(constraint_size);
+    const bool has_converged = pgs_solver.solve(
+        G, g,                  //
+        constraint_models, dt, //
+        boost::make_optional((Eigen::Ref<const VectorXd>)primal_solution));
+    BOOST_CHECK(has_converged);
+    primal_solution = pgs_solver.getPrimalSolution();
+
+    const VectorXd tau_ext = constraint_jacobian.transpose() * primal_solution / dt;
+    VectorXd v_next = v + dt * pin::aba(model, data, q, v, (tau + tau_ext).eval(), pin::Convention::WORLD);
+    VectorXd dv = v * dt;
+    VectorXd q_next = pin::integrate(model, q, dv);
+
+    VectorXd v_wrist_expected = VectorXd::Zero(model.nvs[joint2_id]);
+
+    EIGEN_VECTOR_IS_APPROX(
+        v_next.segment(model.idx_vs[joint2_id], model.nvs[joint2_id]), //
+        v_wrist_expected,                                              //
+        1e-6);
+    pin::forwardKinematics(model, data, q_next);
+    EIGEN_VECTOR_IS_APPROX(Mc.translation(), data.oMi[joint2_id].translation(), 1e-6);
 }
 
-BOOST_AUTO_TEST_CASE(simulator_instance_step_with_friction_on_joints)
+BOOST_AUTO_TEST_CASE(humanoid_with_frame_anchor_constraint_minimal)
 {
-    ModelHandle model(new pin::Model());
-    pin::buildModels::manipulator(*model);
-    model->lowerDryFrictionLimit = VectorXd::Ones(model->nv) * -100000.0;
-    model->upperDryFrictionLimit = VectorXd::Ones(model->nv) * 100000.0;
+    // Construct humanoid
+    pin::Model model;
+    pin::buildModels::humanoid(model, true);
+    pin::Data data(model);
 
-    GeometryModelHandle geom_model(new pin::GeometryModel());
-    pin::buildModels::manipulatorGeometries(*model, *geom_model);
-
-    SimulatorX sim(model, geom_model);
-
-    VectorXd q = neutral(*model);
-    VectorXd v = VectorXd::Zero(model->nv);
-    VectorXd tau = VectorXd::Zero(model->nv);
+    // Initial state
+    VectorXd q = pin::neutral(model);
+    VectorXd v = VectorXd::Zero(model.nv);
+    VectorXd tau = VectorXd::Zero(model.nv);
     const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
-    EIGEN_VECTOR_IS_APPROX(sim.state.vnew, VectorXd::Zero(model->nv), 1e-6);
-    // calling the simulator again should not change the state
-    // and the solver should converge in one iteration
-    sim.step<ADMM>(q, v, tau, dt);
-    EIGEN_VECTOR_IS_APPROX(sim.state.vnew, VectorXd::Zero(model->nv), 1e-6);
-    EIGEN_VECTOR_IS_APPROX(sim.state.vnew, v, 1e-6);
-    EIGEN_VECTOR_IS_APPROX(sim.state.qnew, q, 1e-6);
-    INDEX_EQUALITY_CHECK(sim.workspace.constraint_solvers.admm_solver.getIterationCount(), 0);
-}
 
-BOOST_AUTO_TEST_CASE(simulator_instance_step_with_limits_on_joints_for_manipulator)
-{
-    ModelHandle model(new pin::Model());
-    pin::buildModels::manipulator(*model);
-    // We first consider not active limits
-    model->lowerPositionLimit = VectorXd::Ones(model->nq) * -100000.0;
-    model->upperPositionLimit = VectorXd::Ones(model->nq) * 100000.0;
+    // Compute vfree and crba for G and g
+    // Populate data with system current state
+    pin::crba(model, data, q, pin::Convention::WORLD);
+    const VectorXd v_free = dt * pin::aba(model, data, q, v, tau, pin::Convention::WORLD);
+    data.q_in = q;
+    data.v_in = v;
+    data.tau_in = tau;
 
-    GeometryModelHandle geom_model(new pin::GeometryModel());
-    pin::buildModels::manipulatorGeometries(*model, *geom_model);
+    // Point anchor constraint on the robot right wrist
+    pin::forwardKinematics(model, data, q);
+    const pin::JointIndex joint1_id = 0;
+    const pin::GeomIndex joint2_id = 14;
+    assert((int)joint2_id < model.njoints);
+    assert(model.nvs[joint2_id] == 1); // make sure its a bilaterable joint
+    pin::SE3 Mc = data.oMi[joint2_id];
+    const pin::SE3 joint1_placement = Mc;
+    const pin::SE3 joint2_placement = pin::SE3::Identity();
 
-    SimulatorX sim(model, geom_model);
+    using ConstraintModel = BilateralPointConstraintModel;
+    using ConstraintData = typename ConstraintModel::ConstraintData;
+    std::vector<ConstraintModel> constraint_models;
+    std::vector<ConstraintData> constraint_datas;
+    ConstraintModel cm(model, joint1_id, joint1_placement, joint2_id, joint2_placement);
+    constraint_models.push_back(cm);
+    constraint_datas.push_back(cm.createData());
 
-    VectorXd q = neutral(*model);
-    VectorXd v = VectorXd::Zero(model->nv);
-    VectorXd tau = VectorXd::Zero(model->nv);
-    const double dt = 1e-3;
-    sim.step<ADMM>(q, v, tau, dt);
-    // simulated velocity should be the same as the one computed with aba as constraints are not active
-    VectorXd vnew = v + dt * pinocchio::aba(*model, sim.data(), q, v, tau);
-    EIGEN_VECTOR_IS_APPROX(sim.state.vnew, vnew, 1e-6);
-    // calling the simulator again should not change the state
-    // and the solver should converge in one iteration
-    sim.step<ADMM>(q, v, tau, dt);
-    EIGEN_VECTOR_IS_APPROX(sim.state.vnew, vnew, 1e-6);
-    INDEX_EQUALITY_CHECK(sim.workspace.constraint_solvers.admm_solver.getIterationCount(), 0);
-
-    // we now consider active limits
-    q = VectorXd::Zero(model->nv);
-    model->lowerPositionLimit = VectorXd::Zero(model->nv);
-    model->upperPositionLimit = VectorXd::Zero(model->nv);
-
+    for (std::size_t i = 0; i < constraint_models.size(); ++i)
     {
-        SimulatorX sim = SimulatorX(model, geom_model);
-        sim.settings.constraint_solvers_settings.admm_settings.absolute_feasibility_tol = 1e-9;
-        sim.settings.constraint_solvers_settings.admm_settings.absolute_complementarity_tol = 1e-9;
-        sim.settings.constraint_solvers_settings.admm_settings.relative_feasibility_tol = 1e-9;
-        sim.settings.constraint_solvers_settings.admm_settings.relative_complementarity_tol = 1e-9;
-        sim.step<ADMM>(q, v, tau, dt);
-        EIGEN_VECTOR_IS_APPROX(sim.state.vnew, VectorXd::Zero(model->nv), 1e-6);
-        // calling the simulator again should not change the state
-        // and the solver should converge in one iteration
-        sim.step<ADMM>(q, v, tau, dt);
-        EIGEN_VECTOR_IS_APPROX(sim.state.vnew, VectorXd::Zero(model->nv), 1e-6);
-        INDEX_EQUALITY_CHECK(sim.workspace.constraint_solvers.admm_result.iterations, 0);
+        constraint_models[i].calc(model, data, constraint_datas[i]);
     }
+
+    const Eigen::DenseIndex constraint_size = pin::getTotalConstraintActiveSize(constraint_models);
+
+    // Delassus
+    pin::ContactCholeskyDecomposition chol(model, constraint_models);
+    chol.compute(model, data, constraint_models, constraint_datas, 1e-10);
+
+    // Solve constraint
+    const MatrixXd delassus = chol.getDelassusCholeskyExpression().matrix();
+    const pin::DelassusOperatorDense G(delassus);
+
+    MatrixXd constraint_jacobian(delassus.rows(), model.nv);
+    constraint_jacobian.setZero();
+    getConstraintsJacobian(model, data, constraint_models, constraint_datas, constraint_jacobian);
+
+    const VectorXd g = constraint_jacobian * v_free;
+
+    pin::PGSContactSolver pgs_solver(std::size_t(delassus.rows()));
+    pgs_solver.setAbsolutePrecision(1e-10);
+    pgs_solver.setRelativePrecision(1e-14);
+    pgs_solver.setMaxIterations(1000);
+    BOOST_CHECK(constraint_size == delassus.rows());
+
+    VectorXd primal_solution = VectorXd::Zero(constraint_size);
+
+    const bool has_converged = pgs_solver.solve(
+        G, g,                  //
+        constraint_models, dt, //
+        boost::make_optional((Eigen::Ref<const VectorXd>)primal_solution));
+    BOOST_CHECK(has_converged);
+    primal_solution = pgs_solver.getPrimalSolution();
+
+    const VectorXd tau_ext = constraint_jacobian.transpose() * primal_solution / dt;
+    VectorXd v_next = v + dt * pin::aba(model, data, q, v, (tau + tau_ext).eval(), pin::Convention::WORLD);
+    VectorXd dv = v * dt;
+    VectorXd q_next = pin::integrate(model, q, dv);
+
+    VectorXd v_wrist_expected = VectorXd::Zero(model.nvs[joint2_id]);
+
+    EIGEN_VECTOR_IS_APPROX(
+        v_next.segment(model.idx_vs[joint2_id], model.nvs[joint2_id]), //
+        v_wrist_expected,                                              //
+        1e-6);
+    pin::forwardKinematics(model, data, q_next);
+    EIGEN_VECTOR_IS_APPROX(Mc.translation(), data.oMi[joint2_id].translation(), 1e-6);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
