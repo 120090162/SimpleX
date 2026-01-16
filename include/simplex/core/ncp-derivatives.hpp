@@ -3,6 +3,7 @@
 
 #include "simplex/core/fwd.hpp"
 #include "simplex/macros.hpp"
+#include "simplex/utils/logger.hpp"
 #include "simplex/core/constraints-problem-derivatives.hpp"
 
 namespace simplex

@@ -217,7 +217,7 @@ namespace simplex
 
         //
         // Update joint friction lower/upper bounds based on dt.
-        // The lower/upper bounds we store in ConstraintProblem are forces (in Newton).
+        // The lower/upper bounds we store in ConstraintsProblemDerivatives are forces (in Newton).
         // However, the constraint solvers work in impulses (Newton * s), so we need to scale
         // the lower/upper bounds of the constraint set of the joint friction constraint model.
         {

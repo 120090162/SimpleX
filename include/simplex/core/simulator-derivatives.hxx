@@ -40,15 +40,16 @@ namespace simplex
         MinvJT_.resize(nv, 3 * max_nc);
         dGlamg_dtheta_.resize(3 * max_nc, 3 * nv);
 
+        dual_collision_correction_.resize(nv, nv);
+        dJcTlam_dq_.resize(nv, nv);
+        J1_.resize(6, nv);
+        J2_.resize(6, nv);
+
 #ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
         // Primal/dual collision detection corrective terms
         primal_collision_correction_.resize(3 * max_nc, nv);
-        dual_collision_correction_.resize(nv, nv);
-        dJcTlam_dq_.resize(nv, nv);
 
         Jc_.resize(6, nv);
-        J1_.resize(6, nv);
-        J2_.resize(6, nv);
         doMc_dq_.resize(6, nv);
         dJcv_dq_.resize(6, nv);
         dual_swap_doMc_dq_.resize(6, nv);
@@ -127,6 +128,8 @@ namespace simplex
             // Note: it's important that this function gets called **after** computeABADerivatives,
             // because we need ddq_dtau (Minv).
             computePrimalDualCollisionCorrection(simulator, simulator.state.vnew);
+// #else
+//             computeDualCorrection(simulator, simulator.state.vnew);
 #endif
 
             for (ContactIndex i = 0; i < nc; ++i)
@@ -154,6 +157,7 @@ namespace simplex
                 }
                 else
                 {
+                    // TODO: support other constraint types
                 }
 
                 dGlamg_dvnew_ = dsigma2_dv_.template topRows<3>() - dsigma1_dv_.template topRows<3>();
@@ -173,14 +177,21 @@ namespace simplex
                 dGlamg_dv.noalias() = dGlamg_dvnew_;
                 dGlamg_dv.noalias() += dt * dGlamg_dvnew_ * danew_dv;
 
-                auto dGlamgd_dtau = dGlamg_dtheta().template middleRows<3>(int(3 * i)).rightCols(simulator.model().nv);
-                dGlamgd_dtau.noalias() = dt * dGlamg_dvnew_ * danew_dtau.transpose();
+                auto dGlamg_dtau = dGlamg_dtheta().template middleRows<3>(int(3 * i)).rightCols(simulator.model().nv);
+                dGlamg_dtau.noalias() = dt * dGlamg_dvnew_ * danew_dtau.transpose();
 
                 /// We divide the right-hand side by dt to work in acceleration units
                 /// so that we directly compute the Jacobian of the contact forces (and not the impulses).
                 dGlamg_dtheta() /= dt;
             }
             // TODO(quentinll): add gradient terms from Baumgarte stabilization and other corrections.
+#ifndef NDEBUG
+            std::cout << simplex::logging::DEBUG << "SimulatorDerivatives::stepDerivatives: nc = " << nc << std::endl;
+            std::cout << simplex::logging::DEBUG << "SimulatorDerivatives::stepDerivatives: dGlamg_dtheta: " << dGlamg_dtheta()
+                      << std::endl;
+            std::cout << simplex::logging::DEBUG
+                      << "SimulatorDerivatives::stepDerivatives: dual_collision_correction: " << dual_collision_correction() << std::endl;
+#endif // NDEBUG
 
             /// NCP derivatives
             contact_solver_derivatives.compute();
@@ -195,6 +206,17 @@ namespace simplex
 
             /// ABA correction using dNCP
             danew_dq.noalias() += MinvJT() * dlam_dq;
+
+#ifndef NDEBUG
+            std::cout << simplex::logging::DEBUG << "SimulatorDerivatives::stepDerivatives: danew_dq = " << danew_dq << std::endl;
+#endif // NDEBUG
+
+            // danew_dq.noalias() += dual_collision_correction();
+
+#ifndef NDEBUG
+            std::cout << simplex::logging::DEBUG << "SimulatorDerivatives::stepDerivatives: danew_dq_corr = " << danew_dq << std::endl;
+#endif // NDEBUG
+
 #ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
             danew_dq.noalias() += dual_collision_correction();
 #endif
@@ -214,6 +236,115 @@ namespace simplex
             timer_.stop();
             timings_ = timer_.elapsed();
         }
+    }
+
+    template<typename S, int O, template<typename, int> class JointCollectionTpl>
+    template<typename VelocityVectorType>
+    void SimulatorDerivativesTpl<S, O, JointCollectionTpl>::computeDualCorrection(
+        const SimulatorX & simulator, const Eigen::MatrixBase<VelocityVectorType> & v)
+    {
+        PINOCCHIO_UNUSED_VARIABLE(v);
+
+        const ConstraintsProblemDerivatives & constraint_problem = simulator.workspace.constraint_problem();
+
+        // 初始化累加器，用于存储 d(J^T * lambda) / dq
+        dJcTlam_dq_.setZero();
+
+        // 遍历所有发生碰撞的对
+        for (std::size_t i = 0; i < constraint_problem.pairs_in_collision.size(); ++i)
+        {
+            const std::size_t col_pair_id = constraint_problem.pairs_in_collision[i];
+            const ContactMapper & contact_mapper = constraint_problem.contact_mappers[col_pair_id];
+
+            // 遍历该碰撞对中的所有接触点
+            for (std::size_t j = 0; j < contact_mapper.count; ++j)
+            {
+                const std::size_t idc = contact_mapper.begin + j;
+                const ConstraintModel & cmodel = constraint_problem.constraint_models[idc];
+
+                if (const FrictionalPointConstraintModel * fpcmodel = boost::get<const FrictionalPointConstraintModel>(&cmodel))
+                {
+                    const JointIndex joint1_id = fpcmodel->joint1_id;
+                    const JointIndex joint2_id = fpcmodel->joint2_id;
+
+                    // 获取 Pinocchio Data (去除 const)
+                    Data & data = const_cast<Data &>(simulator.data());
+
+                    // 1. 获取当前接触约束的力 (Impulse/Force)
+                    // --------------------------------------------------------
+                    // 注意：这里的力通常是在 "Contact Frame" (CENTERED/LOCAL_WORLD_ALIGNED) 下表示的
+                    const Vector3s f_linear =
+                        simulator.workspace.constraint_problem().frictional_point_constraints_forces().template segment<3>(int(3 * idc));
+                    // 点接触只有线性力，没有力矩
+                    const Force wrench_contact(f_linear, Vector3s::Zero());
+
+                    // 2. 计算 Dual Correction: d(Jc^T * lambda) / dq
+                    // --------------------------------------------------------
+                    // 我们分别计算物体 1 和物体 2 的贡献。
+                    // 公式原理：对于刚体上的固定点，d(J^T * F)/dq = J^T * (F_local x_dual) * J
+                    // 其中 (F_local x_dual) 是力在局部系下的空间叉乘矩阵的对偶形式。
+
+                    // --- Body 1 (Joint 1) ---
+                    if (joint1_id > 0) // 如果不是宇宙/基座
+                    {
+                        // 计算 Jacobian (LOCAL 坐标系)
+                        J1_.setZero();
+                        ::pinocchio::getFrameJacobian(
+                            simulator.model(), data, joint1_id, fpcmodel->joint1_placement, ::pinocchio::LOCAL, J1_);
+
+                        // 将接触力变换到 Joint 1 的局部坐标系
+                        // i1Mc 是从 Contact Frame 到 Joint 1 Frame 的变换 (即 fpcmodel->joint1_placement)
+                        const SE3 & i1Mc = fpcmodel->joint1_placement;
+                        const Force wrench1 = i1Mc.act(wrench_contact);
+
+                        // 计算 wrench1 对应的对偶叉乘矩阵 (6x6)
+                        // 注意符号：Jc = J2 - J1，所以 Body 1 受到的力是 -lambda
+                        // 但是 d(-J1^T * lambda) = - (dJ1^T * lambda)
+                        Matrix6s coswap1;
+                        dualSmallAdSwap(wrench1, coswap1);
+
+                        // 累加项: - J1^T * coswap1 * J1
+                        dJcTlam_dq_.noalias() -= J1_.transpose() * coswap1 * J1_;
+                    }
+
+                    // --- Body 2 (Joint 2) ---
+                    if (joint2_id > 0)
+                    {
+                        // 计算 Jacobian (LOCAL 坐标系)
+                        J2_.setZero();
+                        ::pinocchio::getFrameJacobian(
+                            simulator.model(), data, joint2_id, fpcmodel->joint2_placement, ::pinocchio::LOCAL, J2_);
+
+                        // 将接触力变换到 Joint 2 的局部坐标系
+                        const SE3 & i2Mc = fpcmodel->joint2_placement;
+                        const Force wrench2 = i2Mc.act(wrench_contact);
+
+                        Matrix6s coswap2;
+                        dualSmallAdSwap(wrench2, coswap2);
+
+                        // 累加项: + J2^T * coswap2 * J2
+                        dJcTlam_dq_.noalias() += J2_.transpose() * coswap2 * J2_;
+                    }
+
+                    // --------------------------------------------------------
+                    // Primal Correction (d(Jc*v)/dq)
+                    // --------------------------------------------------------
+                    // 如果还需要计算 Primal 项 (用于 dGlamg_dq)，在刚体假设下，
+                    // 这就是经典的 "Frame Acceleration Drift" (gamma = Jdot * v)。
+                    // 之前的 primal_collision_correction_ 存储的就是这一项。
+
+                    // 简化计算：直接利用 Pinocchio 的 getFrameAcceleration 计算 drift
+                    // 注意：这需要 getFrameAcceleration 被调用过，或者手动计算 v_frame x v_joint
+                    // 这里为了聚焦 Dual 项，暂时略过复杂的 Primal 简化实现，
+                    // 但逻辑上它不再包含 doMc_dq 项。
+                }
+            }
+        }
+
+        // 3. 最终组装到加速度导数中
+        // 对应公式 (26) 中的 M^{-1} * (dJ^T/dq * lambda)
+        // danew_dtau 存储了 M^{-1} (ABA 关于 tau 的导数)
+        dual_collision_correction().noalias() = danew_dtau * dJcTlam_dq_;
     }
 
 #ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
@@ -353,6 +484,7 @@ namespace simplex
                 }
                 else
                 {
+                    // TODO: support other constraint types
                 }
             }
         }

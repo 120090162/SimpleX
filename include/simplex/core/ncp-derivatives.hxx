@@ -200,6 +200,12 @@ namespace simplex
 
             expressInMinimalSystem(dGlamgdtheta.derived(), rhs());
 
+#ifndef NDEBUG
+            std::cout << simplex::logging::DEBUG << "ContactSolverDerivatives::jvp: rhs: " << rhs() << std::endl;
+            std::cout << simplex::logging::DEBUG << "ContactSolverDerivatives::jvp: check G^{-1}*rhs: " << G().inverse() * rhs()
+                      << std::endl;
+#endif
+
             // solving the reduced system on implicit gradients
             {
                 // #ifndef NDEBUG
@@ -237,6 +243,11 @@ namespace simplex
                 // dlam_dtheta_reduced()).isApprox(rhs())
             }
 
+#ifndef NDEBUG
+            std::cout << simplex::logging::DEBUG << "ContactSolverDerivatives::jvp: dlam_dtheta_reduced: " << dlam_dtheta_reduced()
+                      << std::endl;
+#endif
+
             // retrieves gradients from the reduced solution
             extractFromMinimalSystem(dlam_dtheta_reduced(), dlam_dtheta());
         }
@@ -255,6 +266,7 @@ namespace simplex
     void ContactSolverDerivativesTpl<S, O, JointCollectionTpl>::expressInMinimalSystem(
         const Eigen::MatrixBase<MatrixIn> & rhs, const Eigen::MatrixBase<MatrixOut> & reduced_rhs_) const
     {
+        // AX = -B(dGlamg)
         auto & reduced_rhs = reduced_rhs_.const_cast_derived();
 
         const ContactIndexVector & sticking_contacts = constraint_problem().sticking_contacts;

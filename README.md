@@ -92,3 +92,8 @@ conda install -c conda-forge typed-argument-parser robot_descriptions meshcat-py
 
 meshcat-server
 ```
+
+# TODO
+- 加入diffcoal的支持
+- 加入pybind
+- 加入四足demo

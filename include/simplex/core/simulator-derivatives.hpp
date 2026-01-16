@@ -3,6 +3,7 @@
 
 #include "simplex/core/fwd.hpp"
 #include "simplex/macros.hpp"
+#include "simplex/utils/logger.hpp"
 #include "simplex/core/simulator-x.hpp"
 #include "simplex/core/constraints-problem-derivatives.hpp"
 #include "simplex/core/contact-frame.hpp"
@@ -142,31 +143,33 @@ namespace simplex
         /// \brief Timings for the call to the contact solver.
         coal::CPUTimes timings_;
 
-#ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
-        /// \brief Memory containing the Primal Collision detection Corrective terms.
-        /// This correspongs to dJc*v/dq, with v considered fixed.
-        /// This term takes into account all contact points of the system.
-        MatrixXs primal_collision_correction_;
-
-        /// \brief Memory containing the Dual Collision detection Corrective terms.
-        /// This correspongs to Minv * dJcT*lam/dq, with lam considered fixed.
-        /// This term takes into account all contact points of the system.
-        MatrixXs dual_collision_correction_;
+        /// \brief holder for dJcT*lam/dq for a single contact point. ---------------------
 
         /// \brief Accumulator for dJcT*lam/dq for all contact points.
         MatrixXs dJcTlam_dq_;
-
-        /// \brief Temporary holder for the contact jacobian of a single contact point.
-        Matrix6Xs Jc_;
-
-        /// \brief Temporary holder for dJc*v/dq for a single contact point.
-        Matrix6Xs dJcv_dq_;
 
         /// \brief Temporary holder for a jacobian related to the first geom of a collision pair.
         Matrix6Xs J1_;
 
         /// \brief Temporary holder for a jacobian related to the second geom of a collision pair.
         Matrix6Xs J2_;
+
+        /// \brief Memory containing the Dual Collision detection Corrective terms.
+        /// This correspongs to Minv * dJcT*lam/dq, with lam considered fixed.
+        /// This term takes into account all contact points of the system.
+        MatrixXs dual_collision_correction_;
+
+#ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
+        /// \brief Memory containing the Primal Collision detection Corrective terms.
+        /// This correspongs to dJc*v/dq, with v considered fixed.
+        /// This term takes into account all contact points of the system.
+        MatrixXs primal_collision_correction_;
+
+        /// \brief Temporary holder for the contact jacobian of a single contact point.
+        Matrix6Xs Jc_;
+
+        /// \brief Temporary holder for dJc*v/dq for a single contact point.
+        Matrix6Xs dJcv_dq_;
 
         /// \brief Temporary holder for a doMc/dq, for a single contact point.
         Matrix6Xs doMc_dq_;
@@ -234,6 +237,27 @@ namespace simplex
             return MinvJT_.leftCols(idx);
         }
 
+        /// \brief holder for dJcT*lam/dq for a single contact point. ---------------------
+
+        ///
+        /// \brief Compute the dual collision correction terms.
+        template<typename VelocityVectorType>
+        void computeDualCorrection(const SimulatorX & simulator, const Eigen::MatrixBase<VelocityVectorType> & v);
+
+        ///
+        /// \brief Getter for the dual collision correction terms.
+        MatrixXs & dual_collision_correction() // TODO replace by an eigen map on a vectorXS
+        {
+            return dual_collision_correction_;
+        }
+
+        ///
+        /// \brief Getter for the dual collision correction terms.
+        const MatrixXs & dual_collision_correction() const // TODO replace by an eigen map on a vectorXS
+        {
+            return dual_collision_correction_;
+        }
+
 #ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
         ///
         /// \brief Getter for the primal collision correction terms.
@@ -252,20 +276,6 @@ namespace simplex
         }
 
         ///
-        /// \brief Getter for the dual collision correction terms.
-        MatrixXs & dual_collision_correction() // TODO replace by an eigen map on a vectorXS
-        {
-            return dual_collision_correction_;
-        }
-
-        ///
-        /// \brief Getter for the dual collision correction terms.
-        const MatrixXs & dual_collision_correction() const // TODO replace by an eigen map on a vectorXS
-        {
-            return dual_collision_correction_;
-        }
-
-        ///
         /// \brief Compute the primal/dual collision correction terms.
         template<typename VelocityVectorType>
         void computePrimalDualCollisionCorrection(const SimulatorX & simulator, const Eigen::MatrixBase<VelocityVectorType> & v);
@@ -273,7 +283,6 @@ namespace simplex
 #endif
     };
 
-#ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
     ///
     /// \brief Constructs the swap of the dual of the small adjoint.
     /// This operator encodes the operation ad(m)^T acting on f, where m is a spatial motion and f a
@@ -291,7 +300,6 @@ namespace simplex
         res_.template bottomLeftCorner<3, 3>() = ::pinocchio::skew(wrench.linear());
         res_.template bottomRightCorner<3, 3>() = ::pinocchio::skew(wrench.angular());
     }
-#endif
 
 } // namespace simplex
 

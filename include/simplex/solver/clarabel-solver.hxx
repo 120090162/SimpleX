@@ -135,7 +135,7 @@ namespace simplex
         for (Eigen::Index i = 0; i < nc; ++i)
         {
             const auto & cmodel = constraint_models[static_cast<std::size_t>(i)].get();
-            const auto & cdata = constraint_datas[static_cast<std::size_t>(i)].get();
+            // const auto & cdata = constraint_datas[static_cast<std::size_t>(i)].get();
             using ConstraintModel = ::pinocchio::FrictionalPointConstraintModelTpl<Scalar, Options>;
             // using ConstraintData = ::pinocchio::FrictionalPointConstraintDataTpl<Scalar, Options>;
             if (const ConstraintModel * fpc_model = boost::get<const ConstraintModel>(&cmodel))

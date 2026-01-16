@@ -123,7 +123,7 @@ option(SIMPLEX_USE_DIFFCOAL "Use diffcoal to compute collision detection derivat
 option(SIMPLEX_USE_CLARABEL "Use Clarabel as a constraint solver option" ON)
 option(SIMPLEX_ENABLE_PRIVATE_INTROSPECTION
        "Turns off private/protected members and methods in classes, to allow for easier debugging"
-       OFF)
+       ON)
 
 option(BUILD_WITH_OPENMP_SUPPORT "Build the library with the OpenMP support" OFF)
 if(APPLE)

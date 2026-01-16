@@ -15,6 +15,11 @@ namespace simplex
         const Eigen::MatrixBase<context::VectorXs> &,
         context::Scalar);
 
+    extern template void
+    SimulatorDerivativesTpl<context::Scalar, context::Options, ::pinocchio::JointCollectionDefaultTpl>::computeDualCorrection(
+        const SimulatorXTpl<context::Scalar, context::Options, ::pinocchio::JointCollectionDefaultTpl> &,
+        const Eigen::MatrixBase<context::VectorXs> &);
+
 #ifndef SIMPLEX_SKIP_COLLISION_DERIVATIVES_CONTRIBUTIONS
     extern template void SimulatorDerivativesTpl<context::Scalar, context::Options, ::pinocchio::JointCollectionDefaultTpl>::
         computePrimalDualCollisionCorrection(
