@@ -101,11 +101,12 @@ pip install -e . # install simplex library
 ```bash
 conda install -c conda-forge mujoco matplotlib -y
 conda install -c conda-forge typed-argument-parser robot_descriptions meshcat-python -y
+pip install "imageio[ffmpeg]"==2.37.2 imageio-ffmpeg==0.6.0
 
 meshcat-server
 ```
 
 # TODO
 - [] 加入diffcoal的支持
-- [] 加入pybind
-- [] 加入四足demo
+- [x] 加入pybind
+- [x] 加入四足demo
