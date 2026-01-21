@@ -111,7 +111,32 @@ python simplex_sandbox/forward/cartpole.py
 # 测试cimpc案例
 ```bash
 # 安装特定crocoddyl
+git clone -b m3.2.0 --recursive https://github.com/120090162/crocoddyl.git third_party/crocoddyl
+cd third_party/crocoddyl
+mkdir build && cd build
+cmake .. \
+    -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
+    -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_BENCHMARK=OFF \
+    -DBUILD_EXAMPLES=OFF \
+    -DBUILD_TESTING=OFF \
+    -DBUILD_WITH_IPOPT=OFF \
+    -DGENERATE_PYTHON_STUBS=ON \
+    -DBUILD_PYTHON_INTERFACE=ON \
+    -DBUILD_WITH_MULTITHREADS=ON \
+    -DPYTHON_EXECUTABLE=$(which python)
+make -j4
+make install
+# 测试crocoddyl安装是否正确
+cd ..
+python examples/double_pendulum_fwddyn.py plot
 
+# 测试flip demo
+
+# 测试walk demo
+
+# 测试tolerant demo
 ```
 
 # TODO
