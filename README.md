@@ -104,9 +104,30 @@ conda install -c conda-forge typed-argument-parser robot_descriptions meshcat-py
 pip install "imageio[ffmpeg]"==2.37.2 imageio-ffmpeg==0.6.0
 
 meshcat-server
+# another terminal
+python simplex_sandbox/forward/cartpole.py
+```
+
+# 测试cimpc案例
+```bash
+# 安装特定crocoddyl
+
 ```
 
 # TODO
-- [] 加入diffcoal的支持
+## short term plan
+- [ ] 加入diffcoal的支持
 - [x] 加入pybind
 - [x] 加入四足demo
+- [ ] 加入柔性梯度
+- [ ] 加入cimpc crocoddyl实现
+- [ ] 完成四足行走测试
+- [ ] 加入mujoco sim to sim 测试
+## middle term plan
+- [ ] 完成go2 isaacgym训练
+- [ ] 完成go2 状态判别器训练
+- [ ] 完成go2 cost 设计
+## final term plan
+- [ ] 完成容错框架
+- [ ] 完成flow matching policy的训练
+- [ ] 完成go2 实物部署
