@@ -12,3 +12,5 @@ coverage*
 build/
 .vscode/
 *.log
+
+*.egg-info/

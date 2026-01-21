@@ -63,11 +63,17 @@ set(${PROJECT_NAME}_PINOCCHIO_TEMPLATE_INSTANTIATION_HEADERS
 # --- Python bindings ---
 set(${PROJECT_NAME}_BINDINGS_PYTHON_PUBLIC_HEADERS
     ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/fwd.hpp
-    ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/core/constraints-problem.hpp
-    ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/core/simulator.hpp)
+    ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/core/constraints-problem-derivatives.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/core/simulator-derivatives.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/solver/clarabel-solver.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/core/ncp-derivatives.hpp
+    ${PROJECT_SOURCE_DIR}/include/simplex/bindings/python/core/simulator-x.hpp)
 
 set(${PROJECT_NAME}_BINDINGS_PYTHON_SOURCES
     ${PROJECT_SOURCE_DIR}/bindings/python/core/expose-contact-frame.cpp
-    ${PROJECT_SOURCE_DIR}/bindings/python/core/expose-constraints-problem.cpp
-    ${PROJECT_SOURCE_DIR}/bindings/python/core/expose-simulator.cpp
+    ${PROJECT_SOURCE_DIR}/bindings/python/core/expose-constraints-problem-derivatives.cpp
+    ${PROJECT_SOURCE_DIR}/bindings/python/solver/expose-clarabel-solver.cpp
+    ${PROJECT_SOURCE_DIR}/bindings/python/core/expose-simulator-x.cpp
+    ${PROJECT_SOURCE_DIR}/bindings/python/core/expose-simulator-derivatives.cpp
+    ${PROJECT_SOURCE_DIR}/bindings/python/core/expose-ncp-derivatives.cpp
     ${PROJECT_SOURCE_DIR}/bindings/python/module.cpp)

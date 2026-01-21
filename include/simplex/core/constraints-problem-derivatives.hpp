@@ -1,7 +1,3 @@
-//
-// Copyright (c) 2024 INRIA
-//
-
 #ifndef __simplex_core_constraints_problem_derivatives_hpp__
 #define __simplex_core_constraints_problem_derivatives_hpp__
 

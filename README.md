@@ -82,6 +82,18 @@ cmake .. \
 make -j4 2>&1 | tee build.log
 make install # update the libsimplex.so file
 ./benchmarks/affine-transform
+
+# python binding
+cmake .. \
+    -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
+    -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_TEST_CASES=ON \
+    -DPYTHON_EXECUTABLE=$(which python)
+make -j4 2>&1 | tee build.log
+make install # update the libsimplex.so file
+cd ..
+pip install -e . # install simplex library
 ```
 
 # 测试例子
@@ -94,6 +106,6 @@ meshcat-server
 ```
 
 # TODO
-- 加入diffcoal的支持
-- 加入pybind
-- 加入四足demo
+- [] 加入diffcoal的支持
+- [] 加入pybind
+- [] 加入四足demo
