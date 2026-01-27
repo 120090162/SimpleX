@@ -1,8 +1,8 @@
 import pinocchio as pin
 import numpy as np
-from simple_sandbox.utils.sim_utils import (
+from simplex_sandbox.utils.sim_utils import (
     # addFloor,
-    runSimpleSimulationFromModel,
+    runSimpleXSimulationFromModel,
     runMujocoXML,
     SimulationArgs,
 )
@@ -12,7 +12,7 @@ np.random.seed(args.seed)
 pin.seed(args.seed)
 model_path = "./simple_sandbox/robots/humanoid.xml"
 
-if args.backend == "simple":
+if args.backend == "simplex":
     # Create model
     print("Loading mj robot description...")
     model = pin.buildModelFromMJCF(model_path)
@@ -36,7 +36,7 @@ if args.backend == "simple":
         args.pd_controller_qtar = q0.copy()
         args.pd_controller_vtar = np.zeros(model.nv - 6)  # control all except freeflyer
 
-    runSimpleSimulationFromModel(
+    runSimpleXSimulationFromModel(
         model, geom_model, visual_model, q0, v0, args, add_floor=False
     )
 elif args.backend == "mujoco":

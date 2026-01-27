@@ -1,5 +1,5 @@
 # add_simplex_unit_test(low-complexity-delassus-precision)
-# add_simplex_unit_test(mujoco-humanoid)
+add_simplex_unit_test(mujoco-humanoid)
 # add_simplex_unit_test(simulation-combine-constraints)
 # add_simplex_unit_test(simulation-robots)
 # add_simplex_unit_test(simulator-minimal)

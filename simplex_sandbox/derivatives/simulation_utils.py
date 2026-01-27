@@ -2,8 +2,8 @@ import time
 from typing import Dict
 import numpy as np
 import tap
-from viz_utils import RED, GREEN, BLUE, BLACK, PINK, GREY, BEIGE, PURPLE
-from viz_utils import (
+from simplex_sandbox.utils.viz_common import RED, GREEN, BLUE, BLACK, PINK, GREY, BEIGE, PURPLE
+from simplex_sandbox.utils.viz_utils import (
     register_line,
     register_arrowed_line,
     register_object,
@@ -12,7 +12,7 @@ from viz_utils import (
 )
 import hppfcl
 import pinocchio as pin
-import simple
+import simplex
 import matplotlib.pyplot as plt
 from simulation_args import SimulationArgs
 

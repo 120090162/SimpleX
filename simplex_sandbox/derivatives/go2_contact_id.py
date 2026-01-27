@@ -1,25 +1,27 @@
 import pinocchio as pin
 import numpy as np
 from pin_utils import addSystemCollisionPairs
-from simulation_utils import (
+from simplex_sandbox.utils.sim_utils import (
     addFloor,
-    setPhysicsProperties,
+    addMaterialAndCompliance,
+    SimulationArgs,
 )
-from simulation_args import SimulationArgs
 import simplex
-from compute_derivatives import computeStepDerivatives, finiteDifferencesStep
-import example_robot_data as erd
+from compute_derivatives import finiteDifferencesStep
+# from compute_derivatives import computeStepDerivatives, finiteDifferencesStep
+from robot_descriptions.loaders.pinocchio import load_robot_description as plr
 
 
 class ScriptArgs(SimulationArgs):
-    go1: bool = False
+    contact_solver: str = "admm"
+    go1: bool = True
     hand_stand: bool = False
-    display_target_traj: bool = False
+    display_target_traj: bool = True
     noptim: int = 100
     step_size: float = 1e-3
     linesearch: bool = False
-    debug: bool = False
-    cpp: bool = False
+    debug: bool = True
+    cpp: bool = True
     linesearch: bool = False
     save: bool = False
     maxit_linesearch: int = 1000
@@ -29,7 +31,7 @@ class ScriptArgs(SimulationArgs):
 
 
 args = ScriptArgs().parse_args()
-allowed_solvers = ["ADMM", "PGS"]
+allowed_solvers = ["admm", "pgs", "clarabel"]
 if args.contact_solver not in allowed_solvers:
     print(
         f"Error: unsupported simulator. Avalaible simulators: {allowed_solvers}. Exiting"
@@ -43,12 +45,12 @@ pin.seed(args.seed)
 # ============================================================================
 # Create model
 if args.go1:
-    robot = erd.load("go1")
+    robot = plr("go1_mj_description")
     model = robot.model
     geom_model = robot.collision_model
     visual_model = robot.visual_model
 else:
-    rmodel, rgeom_model, _ = pin.buildModelsFromMJCF("./robots/go2/mjcf/go2.xml")
+    rmodel, _, rgeom_model, _ = pin.buildModelsFromMJCF("simplex_sandbox/robots/go2/mjcf/go2.xml")
     ff_model = pin.Model()
     ff_id = ff_model.addJoint(
         0, pin.JointModelFreeFlyer(), pin.SE3.Identity(), "robot_freeflyer"
@@ -63,14 +65,15 @@ else:
     # Add plane in geom_model
     visual_model = geom_model.copy()
 addFloor(geom_model, visual_model)
-setPhysicsProperties(geom_model, args.material, args.compliance)
+addMaterialAndCompliance(geom_model, args.material, args.compliance)
 
 # Initial state
 # model.lowerPositionLimit = -np.ones((model.nq, 1))
 # model.upperPositionLimit = np.ones((model.nq, 1))
 # q0 = pin.randomConfiguration(model)
 if args.go1:
-    q0 = model.referenceConfigurations["standing"]
+    q0 = model.referenceConfigurations["qpos0"]
+    # q0 = model.referenceConfigurations["standing"]
     if args.hand_stand:
         q0 = np.array(
             [
@@ -110,17 +113,18 @@ actuation[6:, :] = np.eye(model.nv - 6)
 
 data = model.createData()
 geom_data = geom_model.createData()
-simulator = simple.Simulator(model, data, geom_model, geom_data)
-simulator.admm_constraint_solver_settings.absolute_precision = args.tol
-simulator.admm_constraint_solver_settings.relative_precision = args.tol_rel
-simulator.admm_constraint_solver_settings.max_iter = args.maxit
-dsim = simple.SimulatorDerivatives(simulator)
+simulator = simplex.SimulatorX(model, data, geom_model, geom_data)
+simulator.config.constraint_solvers_configs.absolute_precision = args.tol
+simulator.config.constraint_solvers_configs.relative_precision = args.tol_rel
+simulator.config.constraint_solvers_configs.max_iterations = args.maxit
+dsim = simplex.SimulatorDerivatives(simulator)
+# print("Simulator Contact Number:", simulator.workspace.constraint_problem.contact_modes.size())
 
 
 def computeCost(tau):
     simulator.reset()
     simulator.step(q0, v0, actuation @ tau, args.dt)
-    acc = (simulator.vnew - v0) / args.dt
+    acc = (simulator.state.vnew - v0) / args.dt
     cost = 0.5 * (np.linalg.norm(acc) ** 2)
     return cost
 
@@ -134,7 +138,7 @@ if args.save:
 tau_optim = tau_optim_init.copy()
 for n in range(args.noptim):
     simulator.reset()
-    simulator.step(q0, v0, actuation @ tau_optim, args.dt)
+    simulator.step(q0, v0, actuation @ tau_optim, args.dt, simplex.ConstraintSolverType.ADMM)
     if args.finite_differences:
         dvnew_dq, dvnew_dv, dvnew_dtau = finiteDifferencesStep(
             simulator, q0, v0, actuation @ tau_optim, args.dt
@@ -142,6 +146,7 @@ for n in range(args.noptim):
         dvnew_dtau = dsim.dvnew_dtau.copy() @ actuation
     if args.cpp:
         dsim.stepDerivatives(simulator, q0, v0, actuation @ tau_optim, args.dt)
+        print("Simulator Contact Number:", simulator.workspace.constraint_problem.constraints_problem_size)
         dvnew_dtau = dsim.dvnew_dtau.copy() @ actuation
     else:
         dqnew_dq, dqnew_dv, dqnewdtau, dvnew_dq, dvnew_dv, dvnew_dtau = (
@@ -153,13 +158,13 @@ for n in range(args.noptim):
     if args.debug:
         print(f"{dvnew_dtau=}")
         print(f"norm dvnew_dtau {np.linalg.norm(dvnew_dtau)}")
-    q = simulator.qnew.copy()
-    v = simulator.vnew.copy()
+    q = simulator.state.qnew.copy()
+    v = simulator.state.vnew.copy()
     if args.debug:
         input()
 
     # Compute cost
-    acc = (simulator.vnew - v0) / args.dt
+    acc = (simulator.state.vnew - v0) / args.dt
     cost = 0.5 * np.dot(acc, acc)
 
     # Compute cost gradient

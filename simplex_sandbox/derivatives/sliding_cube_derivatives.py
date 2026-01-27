@@ -1,9 +1,9 @@
 import pinocchio as pin
-import simple
+import simplex
 import numpy as np
 import hppfcl
 from pin_utils import addSystemCollisionPairs
-from viz_utils import RED, GREEN, BLUE, BLACK, PINK, GREY, BEIGE
+from simplex_sandbox.utils.viz_utils import RED, GREEN, BLUE, BLACK, PINK, GREY, BEIGE
 from simulation_utils import (
     SimulationArgs,
     setPhysicsProperties,

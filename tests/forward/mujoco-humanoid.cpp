@@ -134,6 +134,11 @@ BOOST_AUTO_TEST_CASE(mujoco_humanoid_with_simulatorx)
 
     {
         SimulatorX sim(model_handle, geom_model_handle);
+        std::cout << simplex::logging::DEBUG
+                  << "SimulatorX Max Contact Number: " << sim.workspace.constraint_problem().getMaxNumberOfContacts() << std::endl;
+        std::cout << simplex::logging::DEBUG
+                  << "SimulatorX Frictional Point Size: " << sim.workspace.constraint_problem().frictional_point_constraints_size()
+                  << std::endl;
         Eigen::VectorXd q = q0;
         Eigen::VectorXd v = v0;
         for (size_t i = 0; i < 100; ++i)
@@ -150,6 +155,11 @@ BOOST_AUTO_TEST_CASE(mujoco_humanoid_with_simulatorx)
 
         std::cout << simplex::logging::DEBUG << "SimulatorX Final ADMM q" << q.transpose() << std::endl;
         std::cout << simplex::logging::DEBUG << "SimulatorX Final ADMM v" << v.transpose() << std::endl;
+        std::cout << simplex::logging::DEBUG << "SimulatorX Contact Number: " << sim.workspace.constraint_problem().getNumberOfContacts()
+                  << std::endl;
+        std::cout << simplex::logging::DEBUG
+                  << "SimulatorX Frictional Point Size: " << sim.workspace.constraint_problem().frictional_point_constraints_size()
+                  << std::endl;
     }
 
     {

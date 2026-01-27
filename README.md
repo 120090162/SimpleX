@@ -75,13 +75,14 @@ conda install -c conda-forge benchmark -y
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
     -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_PYTHON_INTERFACE=OFF \
-    -BUILD_BENCHMARKS=ON \
+    -DBUILD_BENCHMARKS=ON \
     -DPYTHON_EXECUTABLE=$(which python)
 make -j4 2>&1 | tee build.log
 make install # update the libsimplex.so file
-./benchmarks/affine-transform
+./benchmarks/simplex-benchmark-affine-transform
+./benchmarks/simplex-benchmark-mujoco-humanoid
 
 # python binding
 cmake .. \
@@ -105,7 +106,10 @@ pip install "imageio[ffmpeg]"==2.37.2 imageio-ffmpeg==0.6.0
 
 meshcat-server
 # another terminal
+# forward test
 python simplex_sandbox/forward/cartpole.py
+# derivatives test
+python python simplex_sandbox/derivatives/go2_contact_id.py
 ```
 
 # 测试cimpc案例

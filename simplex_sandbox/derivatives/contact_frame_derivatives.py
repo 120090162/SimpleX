@@ -1,8 +1,8 @@
 import numpy as np
 import pinocchio as pin
 import hppfcl
-import pydiffcoal as dcoal
-import simple
+# import pydiffcoal as dcoal
+import simplex
 
 
 # WARNING: this function assumes `pin.computeCollisions` was called before on configuration `q`!
@@ -20,7 +20,7 @@ def constructContactFrame(
     cres: hppfcl.CollisionResult = gdata.collisionResults[col_pair]
     assert cres.isCollision()
     contact: hppfcl.Contact = cres.getContact(0)
-    oMc = simple.placementFromNormalAndPosition(contact.normal, contact.pos)
+    oMc = simplex.placementFromNormalAndPosition(contact.normal, contact.pos)
     return oMc
 
 
@@ -41,7 +41,7 @@ def contactFrameDerivativeWrtConfiguration(
     """
     # Contact frame computation derivatives
     assert col_pair <= len(gmodel.collisionPairs)
-    dM_dn, dM_dp = simple.placementFromNormalAndPositionDerivative(oMc)
+    dM_dn, dM_dp = simplex.placementFromNormalAndPositionDerivative(oMc)
 
     geom1_id = gmodel.collisionPairs[col_pair].first
     geom2_id = gmodel.collisionPairs[col_pair].second

@@ -12,7 +12,7 @@ class ScriptArgs(SimulationArgs):
     display: bool = True  # display the simulation
     backend: str = "simplex"
     display_traj: bool = True  # display the trajectory
-    pd_controller: bool = False  # use a PD controller
+    pd_controller: bool = True  # use a PD controller
     random_init_vel: bool = True  # random initial velocity
 
 args = ScriptArgs().parse_args()
@@ -28,21 +28,24 @@ visual_model = robot_mj.visual_model
 # define some specifc collision pairs, need to add floor first
 addFloor(geom_model, visual_model)
 # geom_model.removeAllCollisionPairs()
-# foot_names = ["RL_foot_0", "FR_foot_0", "FL_foot_0", "RR_foot_0"]
+# foot_names = ["RL", "FR", "FL", "RR"]
 # ground_name = "floor"
-#
+
 # for foot_name in foot_names:
 #     foot_id = geom_model.getGeometryId(foot_name)
 #     ground_id = geom_model.getGeometryId(ground_name)
+#     if foot_id >= geom_model.ngeoms or ground_id >= geom_model.ngeoms:
+#         print(f"Warning: {foot_name} or {ground_name} not found in GeometryModel. Skipping...")
+#         continue
 #     col_pair = pin.CollisionPair(foot_id, ground_id)
 #     print(
 #         f"Adding collision pair between {foot_name} [id = {foot_id}] and {ground_name} [id = {ground_id}]"
 #     )
 #     geom_model.addCollisionPair(col_pair)
 
-for joint in model.joints:
-    print("=============================")
-    print(joint)
+# for joint in model.joints:
+#     print("=============================")
+#     print(joint)
     # if joint.shortname() == "JointModelComposite":
     #     print(joint.extract())
 

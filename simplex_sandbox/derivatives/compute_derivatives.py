@@ -5,16 +5,16 @@ from contact_frame_derivatives import (
     contactVelocityDerivativeWrtConfiguration,
     contactForceDerivativeWrtConfiguration,
 )
-import simple
+import simplex
 import hppfcl
-import pydiffcoal as dcoal
+# import pydiffcoal as dcoal
 
 np.set_printoptions(suppress=True)
 np.set_printoptions(linewidth=np.nan)
 np.set_printoptions(precision=2)
 
 
-def __computePrimalDualCollisionCorrection(sim: simple.Simulator, v: np.ndarray):
+def __computePrimalDualCollisionCorrection(sim: simplex.SimulatorX, v: np.ndarray):
     """
     This function is a backup, such that **all** the terms that are involved in it are tested in
     the script `derivative_contact_frame_wrt_configuration.py`.
@@ -31,7 +31,7 @@ def __computePrimalDualCollisionCorrection(sim: simple.Simulator, v: np.ndarray)
     nc = 0  # count number of contact points; by the end, there should be as many as in the contact problem.
     for i in range(len(sim.constraint_problem.pairs_in_collision)):
         col_pair: int = sim.constraint_problem.pairs_in_collision[i]
-        contact_mapper: simple.ContactMapper = sim.constraint_problem.contact_mappers[
+        contact_mapper: simpl额x.ContactMapper = sim.constraint_problem.contact_mappers[
             col_pair
         ]
         for j in range(contact_mapper.count):
@@ -87,7 +87,7 @@ def dualSmallAdSwap(wrench: pin.Force):
     return res
 
 
-def computePrimalDualCollisionCorrection(sim: simple.Simulator, v: np.ndarray):
+def computePrimalDualCollisionCorrection(sim: simplex.SimulatorX, v: np.ndarray):
     """
     Computes the Primal and Dual Collision detection Corrective terms
     Primal: (dJc*v/dq).
@@ -101,7 +101,7 @@ def computePrimalDualCollisionCorrection(sim: simple.Simulator, v: np.ndarray):
     dJcTlam_dq = np.zeros((sim.model.nv, sim.model.nv))
     for i in range(len(sim.constraint_problem.pairs_in_collision)):
         col_pair: int = sim.constraint_problem.pairs_in_collision[i]
-        contact_mapper: simple.ContactMapper = sim.constraint_problem.contact_mappers[
+        contact_mapper: simplex.ContactMapper = sim.constraint_problem.contact_mappers[
             col_pair
         ]
 
@@ -136,7 +136,7 @@ def computePrimalDualCollisionCorrection(sim: simple.Simulator, v: np.ndarray):
             ]
 
             # Compute doMc/dn and doMc/dp
-            doMc_dn, doMc_dp = simple.placementFromNormalAndPositionDerivative(oMc)
+            doMc_dn, doMc_dp = simplex.placementFromNormalAndPositionDerivative(oMc)
 
             # Get derivative of contact patch point.
             cpos = oMc.translation
@@ -328,7 +328,7 @@ def collectActiveSet(lam, sig, epsilon=1e-6):
 
 def computeNCPDerivatives(sim, dGlamgdtheta):
     ndtheta = dGlamgdtheta.shape[1]
-    lam = sim.constraint_problem.point_contact_constraint_forces()
+    lam = sim.constraint_problem.frictional_point_constraints_forces()
     contact_chol = sim.constraint_problem.constraint_cholesky_decomposition
     mu = 1e-12
     contact_chol.updateDamping(mu)
@@ -424,7 +424,7 @@ def computeNCPDerivatives(sim, dGlamgdtheta):
     return dlam_dtheta
 
 
-def finiteDifferencesStep(simulator: simple.Simulator, q, v, tau, dt, eps=1e-6):
+def finiteDifferencesStep(simulator: simplex.SimulatorX, q, v, tau, dt, eps=1e-6):
     """
     Finite differences step for the simulator
     """
@@ -443,12 +443,12 @@ def finiteDifferencesStep(simulator: simple.Simulator, q, v, tau, dt, eps=1e-6):
         qplus = pin.integrate(simulator.model, q, qdot)
         simulator.reset()
         simulator.step(qplus, v, tau, dt)
-        vnewplus = simulator.vnew.copy()
+        vnewplus = simulator.state.vnew.copy()
 
         qminus = pin.integrate(simulator.model, q, -qdot)
         simulator.reset()
         simulator.step(qminus, v, tau, dt)
-        vnewminus = simulator.vnew.copy()
+        vnewminus = simulator.state.vnew.copy()
 
         dvnew_dq[:, i] = (vnewplus - vnewminus) / (2 * eps)
 
@@ -458,11 +458,11 @@ def finiteDifferencesStep(simulator: simple.Simulator, q, v, tau, dt, eps=1e-6):
 
         simulator.reset()
         simulator.step(q, v + vdot, tau, dt)
-        vnewplus = simulator.vnew.copy()
+        vnewplus = simulator.state.vnew.copy()
 
         simulator.reset()
         simulator.step(q, v - vdot, tau, dt)
-        vnewminus = simulator.vnew.copy()
+        vnewminus = simulator.state.vnew.copy()
 
         dvnew_dv[:, i] = (vnewplus - vnewminus) / (2 * eps)
 
@@ -472,11 +472,11 @@ def finiteDifferencesStep(simulator: simple.Simulator, q, v, tau, dt, eps=1e-6):
 
         simulator.reset()
         simulator.step(q, v, tau + taudot, dt)
-        vnewplus = simulator.vnew.copy()
+        vnewplus = simulator.state.vnew.copy()
 
         simulator.reset()
         simulator.step(q, v, tau - taudot, dt)
-        vnewminus = simulator.vnew.copy()
+        vnewminus = simulator.state.vnew.copy()
 
         dvnew_dtau[:, i] = (vnewplus - vnewminus) / (2 * eps)
     return dvnew_dq, dvnew_dv, dvnew_dtau

@@ -384,16 +384,14 @@ def plotContactSolver(
         stats: pin.SolverStats = sim.workspace.constraint_solvers.admm_solver.stats
         if args.contact_solver == "admm":
             solver = sim.workspace.constraint_solvers.admm_solver
-            solver_result = sim.workspace.constraint_solvers.admm_result
         if args.contact_solver == "pgs":
             solver = sim.workspace.constraint_solvers.pgs_solver
-            solver_result = sim.workspace.constraint_solvers.pgs_result
         if args.contact_solver == "clarabel":
             solver = sim.workspace.constraint_solvers.clarabel_solver
-        stats = solver.stats
-        primal_feas = solver_result.primal_feasibility
-        dual_feas = solver_result.dual_feasibility
-        it = solver_result.iterations
+        stats = solver.getStats()
+        primal_feas = solver.getAbsoluteConvergenceResidual()
+        dual_feas = solver.getRelativeConvergenceResidual()
+        it = solver.getIterationCount()
         if stats.size() > 0:
             plt.cla()
             plt.clf()
@@ -1013,6 +1011,7 @@ def runSimpleXSimulationFromModel(
         )
     else:
         sim = simplex.SimulatorX(model, geom_model)
+        print("Simulator Contact Number: " + str(sim.workspace.constraint_problem.joint_limit_constraint_size))
 
     runSimpleXSimulation(sim, args, q0, v0, vizer, prev_vizer)
 

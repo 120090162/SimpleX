@@ -13,4 +13,4 @@ endfunction()
 
 add_simplex_benchmark(mujoco-humanoid)
 add_simplex_benchmark(affine-transform)
-add_simplex_benchmark(mujoco-humanoid-introspection)
+# add_simplex_benchmark(mujoco-humanoid-introspection)
