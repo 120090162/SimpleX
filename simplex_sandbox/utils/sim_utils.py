@@ -151,9 +151,9 @@ def setupJointsConstraints(model: pin.Model, args: SimulationArgs):
             if joint.nv == 1:
                 model.damping[joint_idx] = args.damping
             if joint.shortname() != "JointModelFreeFlyer":
-                model.lowerDryFrictionLimit[
-                    joint_idx : joint_idx + joint.nv
-                ] = -args.joint_friction
+                model.lowerDryFrictionLimit[joint_idx : joint_idx + joint.nv] = (
+                    -args.joint_friction
+                )
                 model.upperDryFrictionLimit[joint_idx : joint_idx + joint.nv] = (
                     args.joint_friction
                 )
@@ -290,14 +290,14 @@ def setupSimulatorFromArgs(sim: simplex.SimulatorX, args: SimulationArgs):
         args.debug or args.debug_step >= 0
     )
     sim.config.constraint_solvers_configs.pgs_config.max_iterations = args.maxit
-    sim.config.constraint_solvers_configs.pgs_config.absolute_precision = (
+    sim.config.constraint_solvers_configs.pgs_config.absolute_precision = args.tol
+    sim.config.constraint_solvers_configs.pgs_config.relative_precision = args.tol_rel
+    sim.config.constraint_solvers_configs.pgs_config.absolute_complementarity_tol = (
         args.tol
     )
-    sim.config.constraint_solvers_configs.pgs_config.relative_precision = (
+    sim.config.constraint_solvers_configs.pgs_config.relative_complementarity_tol = (
         args.tol_rel
     )
-    sim.config.constraint_solvers_configs.pgs_config.absolute_complementarity_tol = args.tol
-    sim.config.constraint_solvers_configs.pgs_config.relative_complementarity_tol = args.tol_rel
     # CLARABEL
     clarabel_config = sim.config.constraint_solvers_configs.clarabel_config
     clarabel_config.max_iter = args.maxit
@@ -311,12 +311,8 @@ def setupSimulatorFromArgs(sim: simplex.SimulatorX, args: SimulationArgs):
         args.debug or args.debug_step >= 0
     )
     sim.config.constraint_solvers_configs.admm_config.max_iterations = args.maxit
-    sim.config.constraint_solvers_configs.admm_config.absolute_precision = (
-        args.tol
-    )
-    sim.config.constraint_solvers_configs.admm_config.relative_precision = (
-        args.tol_rel
-    )
+    sim.config.constraint_solvers_configs.admm_config.absolute_precision = args.tol
+    sim.config.constraint_solvers_configs.admm_config.relative_precision = args.tol_rel
     sim.config.constraint_solvers_configs.admm_config.ratio_primal_dual = (
         args.ratio_primal_dual
     )
@@ -331,12 +327,8 @@ def setupSimulatorFromArgs(sim: simplex.SimulatorX, args: SimulationArgs):
     sim.config.constraint_solvers_configs.admm_config.rho_power_factor = (
         args.rho_power_factor
     )
-    sim.config.constraint_solvers_configs.admm_config.rho_power = (
-        args.rho_power
-    )
-    sim.config.constraint_solvers_configs.admm_config.rho_momentum = (
-        args.rho_momentum
-    )
+    sim.config.constraint_solvers_configs.admm_config.rho_power = args.rho_power
+    sim.config.constraint_solvers_configs.admm_config.rho_momentum = args.rho_momentum
     sim.config.constraint_solvers_configs.admm_config.rho_update_ratio = (
         args.rho_update_ratio
     )
@@ -346,13 +338,11 @@ def setupSimulatorFromArgs(sim: simplex.SimulatorX, args: SimulationArgs):
     sim.config.constraint_solvers_configs.admm_config.anderson_acceleration_capacity = (
         args.anderson_acceleration_capacity
     )
-    sim.config.constraint_solvers_configs.admm_config.lanczos_size = (
-        args.lanczos_size
+    sim.config.constraint_solvers_configs.admm_config.lanczos_size = args.lanczos_size
+    sim.config.constraint_solvers_configs.admm_config.max_delassus_decomposition_updates = (
+        args.max_delassus_decomposition_updates
     )
-    sim.config.constraint_solvers_configs.admm_config.max_delassus_decomposition_updates = args.max_delassus_decomposition_updates
-    sim.config.constraint_solvers_configs.admm_config.dual_momentum = (
-        args.dual_momentum
-    )
+    sim.config.constraint_solvers_configs.admm_config.dual_momentum = args.dual_momentum
     sim.config.constraint_solvers_configs.admm_config.linear_update_rule_factor = (
         args.linear_update_rule_factor
     )
@@ -819,6 +809,10 @@ def simulateSystem(
                     zero_torque,
                 )
             sim.step(q, v, zero_torque, args.dt, solver_type)
+            print(
+                f"Simulator {t} Contact Number: "
+                + str(sim.workspace.constraint_problem.getNumberOfContacts())
+            )
         except Exception as e:
             if (
                 args.display
@@ -1011,7 +1005,10 @@ def runSimpleXSimulationFromModel(
         )
     else:
         sim = simplex.SimulatorX(model, geom_model)
-        print("Simulator Contact Number: " + str(sim.workspace.constraint_problem.joint_limit_constraint_size))
+        print(
+            "Simulator Contact Number: "
+            + str(sim.workspace.constraint_problem.getNumberOfContacts())
+        )
 
     runSimpleXSimulation(sim, args, q0, v0, vizer, prev_vizer)
 

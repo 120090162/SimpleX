@@ -7,13 +7,15 @@ from simplex_sandbox.utils.sim_utils import (
     SimulationArgs,
 )
 
+
 class ScriptArgs(SimulationArgs):
     remove_anchor_constraints: bool = False
     display: bool = True  # display the simulation
     backend: str = "simplex"
     display_traj: bool = True  # display the trajectory
-    pd_controller: bool = True  # use a PD controller
-    random_init_vel: bool = True  # random initial velocity
+    pd_controller: bool = False  # use a PD controller
+    random_init_vel: bool = False  # random initial velocity
+
 
 args = ScriptArgs().parse_args()
 np.random.seed(args.seed)
@@ -35,7 +37,9 @@ addFloor(geom_model, visual_model)
 #     foot_id = geom_model.getGeometryId(foot_name)
 #     ground_id = geom_model.getGeometryId(ground_name)
 #     if foot_id >= geom_model.ngeoms or ground_id >= geom_model.ngeoms:
-#         print(f"Warning: {foot_name} or {ground_name} not found in GeometryModel. Skipping...")
+#         print(
+#             f"Warning: {foot_name} or {ground_name} not found in GeometryModel. Skipping..."
+#         )
 #         continue
 #     col_pair = pin.CollisionPair(foot_id, ground_id)
 #     print(
@@ -46,8 +50,8 @@ addFloor(geom_model, visual_model)
 # for joint in model.joints:
 #     print("=============================")
 #     print(joint)
-    # if joint.shortname() == "JointModelComposite":
-    #     print(joint.extract())
+# if joint.shortname() == "JointModelComposite":
+#     print(joint.extract())
 
 # Initial state
 q0 = model.referenceConfigurations["qpos0"]
