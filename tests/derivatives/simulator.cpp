@@ -657,12 +657,12 @@ BOOST_AUTO_TEST_CASE(simulator_derivatives_ball_plane_with_compliance)
     std::cout << simplex::logging::DEBUG << "dlam_dtau: " << dlam_dq << std::endl;
     std::cout << simplex::logging::DEBUG << "dlam_dv: " << dlam_dv << std::endl;
     std::cout << simplex::logging::DEBUG << "dlam_dtau: " << dlam_dtau << std::endl;
-    std::cout << simplex::logging::DEBUG << "dGlamg_dtheta: " << dsim.dGlamg_dtheta() << std::endl;
+    // std::cout << simplex::logging::DEBUG << "dGlamg_dtheta: " << dsim.dGlamg_dtheta() << std::endl;
     std::cout << simplex::logging::DEBUG << "M: " << sim.data().M << std::endl;
     std::cout << simplex::logging::DEBUG << "G: " << dsim.contact_solver_derivatives.G() << std::endl;
     std::cout << simplex::logging::DEBUG
               << "M^{-1}: " << sim.workspace.constraint_problem().constraint_cholesky_decomposition.getInverseMassMatrix() << std::endl;
-    std::cout << simplex::logging::DEBUG << "delassus: " << dsim.contact_solver_derivatives.delassus() << std::endl;
+    // std::cout << simplex::logging::DEBUG << "delassus: " << dsim.contact_solver_derivatives.delassus() << std::endl;
     std::cout << simplex::logging::DEBUG << "contact forces: " << sim.workspace.constraint_problem().frictional_point_constraints_forces()
               << std::endl;
 
