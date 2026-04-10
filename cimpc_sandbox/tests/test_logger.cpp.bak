@@ -1,0 +1,51 @@
+#include <cstdio>
+#include <iostream>
+#include "data_logger.h"
+
+//************************
+// main function
+int main(int argc, const char **argv)
+{
+    // 初始化数据记录器
+    DataLogger logger("../record/datalog.log"); // 日志文件路径
+
+    // 添加记录项（变量名和长度）
+    logger.addIterm("joint_position", 3); // 关节位置，3个变量
+    logger.addIterm("joint_velocity", 3); // 关节速度，3个变量
+    logger.addIterm("motor_torque", 3);   // 电机扭矩，3个变量
+    logger.addIterm("timestamp", 1);      // 时间戳，1个变量
+
+    // 完成记录项添加，并生成 MATLAB 脚本
+    logger.finishItermAdding();
+
+    // 模拟数据记录（3帧数据）
+    for (int frame = 0; frame < 3; ++frame)
+    {
+        // 开始新的一行记录
+        logger.startNewLine();
+
+        // 记录关节位置（double* 类型）
+        double joint_pos[3] = {0.1 * frame, 0.2 * frame, 0.3 * frame};
+        logger.recItermData("joint_position", joint_pos);
+
+        // 记录关节速度（std::vector<double> 类型）
+        std::vector<double> joint_vel = {0.4 * frame, 0.5 * frame, 0.6 * frame};
+        logger.recItermData("joint_velocity", joint_vel);
+
+        // 记录电机扭矩（Eigen::VectorXd 类型）
+        Eigen::VectorXd motor_torque(3);
+        motor_torque << 0.7 * frame, 0.8 * frame, 0.9 * frame;
+        logger.recItermData("motor_torque", motor_torque);
+
+        // 记录时间戳（double 类型）
+        double timestamp = 0.01 * frame;
+        logger.recItermData("timestamp", timestamp);
+
+        // 完成行记录
+        logger.finishLine();
+    }
+
+    std::cout << "Data logger test completed successfully!" << std::endl;
+
+    return 0;
+}

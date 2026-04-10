@@ -173,6 +173,15 @@ python examples/double_pendulum_fwddyn.py plot
 # 测试tolerant demo
 ```
 
+# 测试指令
+```bash
+cd cimpc_sandbox
+mkdir build && cd build
+cmake ..
+make -j4
+ctest
+```
+
 # TODO
 ## short term plan
 - [ ] 加入diffcoal的支持
