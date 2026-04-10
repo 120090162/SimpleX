@@ -5,8 +5,8 @@
 conda create -n simplex python=3.10 -c conda-forge -y
 conda activate simplex
 conda install -c conda-forge gcc_linux-64=11 gxx_linux-64=11 cmake make git pkg-config -y
-conda install -c conda-forge eigen boost urdfdom hpp-fcl console_bridge -y # auto install coal
-conda install -c conda-forge eigenpy numpy -y
+conda install -c conda-forge eigen=3.4.0 eigenpy boost urdfdom hpp-fcl console_bridge -y # auto install coal
+conda install -c conda-forge numpy -y
 
 git clone --recursive https://github.com/120090162/SimpleX.git
 # 安装特定版本的pinocchio
@@ -89,7 +89,8 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
     -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TEST_CASES=ON \
+    -DBUILD_TEST_CASES=OFF \
+    -DBUILD_PYTHON_INTERFACE=ON \
     -DPYTHON_EXECUTABLE=$(which python)
 make -j4 2>&1 | tee build.log
 make install # update the libsimplex.so file
@@ -109,12 +110,41 @@ meshcat-server
 # forward test
 python simplex_sandbox/forward/cartpole.py
 # derivatives test
-python python simplex_sandbox/derivatives/go2_contact_id.py
+python simplex_sandbox/derivatives/go2_contact_id.py
 ```
 
 # 测试cimpc案例
 ```bash
-# 安装特定crocoddyl
+# 安装contactbench, ref to https://github.com/120090162/a1-cimpc-control/tree/dev
+conda install -c conda-forge line_profiler proxsuite simde cereal -y
+git clone -b dev --recursive https://github.com/120090162/ContactBench.git third_party/ContactBench
+cd third_party/ContactBench
+mkdir build && cd build
+cmake .. \
+    -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
+    -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DPYTHON_EXECUTABLE=$(which python)
+make -j4
+make install
+# 测试contactbench安装是否正确
+cd ../../..
+conda install -c conda-forge loop-rate-limiters cvxpy -y # make sure cvxpy >= 1.7.2
+# display xml model
+python examples/display_model.py --xml_path=unitree_go2/scene_display.xml
+# test contact force
+python examples/test_force.py
+# test_cb_simulate
+python examples/test_simulate.py --record --save --plot
+# test cb_solvers
+python examples/test_solvers.py
+
+# 注意:
+# 会有小概率出现报 Fatal Python error: Segmentation fault
+# python 数值精度问题, 多式几次就好
+
+
+# 安装特定crocoddyl, make sure the pos is under Simplex
 git clone -b m3.2.0 --recursive https://github.com/120090162/crocoddyl.git third_party/crocoddyl
 cd third_party/crocoddyl
 mkdir build && cd build

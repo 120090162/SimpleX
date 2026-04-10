@@ -1,0 +1,9 @@
+<mujoco>
+  <sensor>    
+    <!-- Force sensors -->
+    <contact name="FR_floor_force" geom1="FR_foot_collision" geom2="floor" num="3" data="force"/>
+    <contact name="FL_floor_force" geom1="FL_foot_collision" geom2="floor" num="3" data="force"/>
+    <contact name="RL_floor_force" geom1="RL_foot_collision" geom2="floor" num="3" data="force"/>
+    <contact name="RR_floor_force" geom1="RR_foot_collision" geom2="floor" num="3" data="force"/>
+  </sensor>
+</mujoco>

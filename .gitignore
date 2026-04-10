@@ -16,3 +16,4 @@ build/
 *.egg-info/
 output/
 third_party/crocoddyl/
+third_party/ContactBench/
