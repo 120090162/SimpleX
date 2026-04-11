@@ -21,23 +21,8 @@ args = ScriptArgs().parse_args()
 np.random.seed(args.seed)
 pin.seed(args.seed)
 
-print("Loading go2 robot description...")
-import os
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-xml_path = f"{current_dir}/../../assets/unitree_go2/go2.xml"
-# xml_path = f"{current_dir}/../robots/go2/mjcf/go2.xml"
-
-model = pin.buildModelFromMJCF(xml_path)
-
-collision_model = pin.buildGeomFromMJCF(model, xml_path, pin.GeometryType.COLLISION)
-visual_model = pin.buildGeomFromMJCF(model, xml_path, pin.GeometryType.VISUAL)
-
-robot_mj = pin.RobotWrapper(
-    model=model, collision_model=collision_model, visual_model=visual_model
-)
-
+print("Loading mj robot description...")
+robot_mj = plr("go2_mj_description")
 model = robot_mj.model
 geom_model = robot_mj.collision_model
 visual_model = robot_mj.visual_model
@@ -69,7 +54,7 @@ addFloor(geom_model, visual_model)
 #     print(joint.extract())
 
 # Initial state
-q0 = model.referenceConfigurations["home"]
+q0 = model.referenceConfigurations["qpos0"]
 if args.random_init_vel:
     v0 = np.random.randn(model.nv)
 else:

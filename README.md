@@ -19,6 +19,7 @@ cmake .. \
     -DCMAKE_PREFIX_PATH=$CONDA_PREFIX \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_WITH_COLLISION_SUPPORT=ON \
+    -DBUILD_WITH_SDF_SUPPORT=OFF \
     -DBUILD_PYTHON_INTERFACE=ON \
     -DPYTHON_EXECUTABLE=$(which python)
 
@@ -186,11 +187,6 @@ ctest
 ```
 
 `calcDiff_test.ipynb`与`cimpc_test.ipynb`可以检测cimpc算法使用是否合理
-
-```bash
-# dependence
-conda install -c conda-forge casadi -y
-```
 
 # TODO
 ## short term plan
