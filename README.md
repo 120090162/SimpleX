@@ -174,12 +174,22 @@ python examples/double_pendulum_fwddyn.py plot
 ```
 
 # 测试指令
+
+cimpc_sandbox下存放着旧cimpc的代码
+
 ```bash
 cd cimpc_sandbox
 mkdir build && cd build
 cmake ..
 make -j4
 ctest
+```
+
+`calcDiff_test.ipynb`与`cimpc_test.ipynb`可以检测cimpc算法使用是否合理
+
+```bash
+# dependence
+conda install -c conda-forge casadi -y
 ```
 
 # TODO
