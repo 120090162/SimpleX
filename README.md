@@ -172,6 +172,9 @@ python examples/double_pendulum_fwddyn.py plot
 # 测试walk demo
 
 # 测试tolerant demo
+
+# go2 sim demo
+python demo/go2_sim.py
 ```
 
 # 测试指令
@@ -187,6 +190,13 @@ ctest
 ```
 
 `calcDiff_test.ipynb`与`cimpc_test.ipynb`可以检测cimpc算法使用是否合理
+
+## 小工具
+```bash
+# meshcat端口清除脚本
+chmod +x scripts/kill_meshcat_ports.sh
+./scripts/kill_meshcat_ports.sh
+```
 
 # TODO
 ## short term plan

@@ -15,6 +15,10 @@ class ScriptArgs(SimulationArgs):
     display_traj: bool = True  # display the trajectory
     pd_controller: bool = False  # use a PD controller
     random_init_vel: bool = False  # random initial velocity
+    joint_limit: bool = True
+    display_contacts = False
+    # joint_friction: float = 0.01
+    # damping: float = 0.1
 
 
 args = ScriptArgs().parse_args()

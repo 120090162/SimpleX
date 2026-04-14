@@ -1,0 +1,58 @@
+# SimpleX Simulation Configuration File
+
+# --- General Simulation & Time Parameters ---
+horizon: 100000      # Total number of simulation steps
+dt: 0.001            # Simulation time step (usually 1e-3)
+sim_fps: 1000        # Simulation frequency (steps per second)
+render_fps: 60       # Target viewer rendering frequency
+backend: "simplex"   # Physics/Simulation backend engine
+seed: 2568           # Random seed for reproducibility
+
+# --- Core Solver Settings ---
+contact_solver: "clarabel" # Supported solvers: "admm", "pgs", "clarabel"
+maxit: 1000                # Maximum number of iterations for the solver
+tol: 1.0e-6                # Absolute tolerance for constraint solver
+tol_rel: 1.0e-6            # Relative tolerance for constraint solver
+solve_ccp: false           # Whether to solve as a Convex Cone Problem (True) or NCP (False)
+
+# --- Physical Properties & Environment ---
+material: "metal"    # Contact material (affects friction: "ice", "wood", "metal", etc.)
+compliance: 0.0      # Contact compliance/elasticity (0 for rigid)
+damping: 0.0         # Joint damping constant
+joint_friction: 0.0  # Joint dry friction limit
+joint_limit: false   # Whether to enforce joint position limits
+
+# --- Contact & Collision Configuration ---
+max_contacts_per_pair: 4           # Max contact points maintained per colliding geometry pair
+patch_tolerance: 1.0e-3            # Tolerance for merging contact points into a contact patch
+collision_pairs_init_margin: 1.0e-2 # Security margin for initial collision pair culling
+baumgarte_kp: 0.0                  # Baumgarte stabilization proportional gain (Kp)
+baumgarte_kd: 0.0                  # Baumgarte stabilization derivative gain (Kd)
+
+# --- ADMM & Advanced Solver Tuning ---
+warmstart_constraint_velocities: 1   # Warm-start dual variables/constraint velocities (1=True, 0=False)
+warmstart_mu_prox: 0                 # Warm-start mu_prox for ADMM
+mu_prox: 1.0e-4                      # Proximal value for ADMM regularization
+admm_update_rule: "spectral"         # ADMM step size update rule ("spectral", "constant", "linear", etc.)
+ratio_primal_dual: 10.0              # Target ratio between primal and dual residuals for tuning
+tau: 1.0                             # Step length for ADMM primal update
+tau_prox: 1.0                        # Step length for ADMM proximal update
+warmstart_rho: 1                     # Warm-start the penalty parameter rho
+rho: 10.0                            # Initial penalty parameter (rho) for ADMM
+rho_power: 0.05                      # Power parameter for rho adaptation
+rho_power_factor: 0.05               # Scaling factor for rho power adaptation
+lanczos_size: 10                     # Krylov/Lanczos subspace size for certain spectral updates
+delassus_type: "rigid_body"          # Format of the Delassus matrix ("dense", "cholesky", "rigid_body")
+max_delassus_decomposition_updates: 100000 # Stop updating Delassus factorization after this many steps
+dual_momentum: 0.0                   # Dual momentum factor in [0, 1] (0 = disabled)
+rho_momentum: 0.0                    # Momentum for rho updates [0, 1]
+rho_update_ratio: 0.0                # Threshold ratio to trigger rho updates (must be >= 0)
+rho_min_update_frequency: 1          # Minimum steps between rho updates (must be >= 1)
+anderson_acceleration_capacity: 0    # History capacity for Anderson Acceleration (>= 2 to enable)
+linear_update_rule_factor: 2.0       # Scaling factor when using linear update rules
+
+# --- Debugging & Telemetry ---
+debug: false         # Enable general debug output
+debug_step: -1       # Specific step to start printing debug info (-1 to disable)
+record_metrics: false # Enable recording of simulation telemetry and timing metrics
+plot_metrics: 1      # Flag/interval to generate metric plots
