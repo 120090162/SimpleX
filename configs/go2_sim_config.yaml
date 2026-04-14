@@ -42,7 +42,7 @@ rho: 10.0                            # Initial penalty parameter (rho) for ADMM
 rho_power: 0.05                      # Power parameter for rho adaptation
 rho_power_factor: 0.05               # Scaling factor for rho power adaptation
 lanczos_size: 10                     # Krylov/Lanczos subspace size for certain spectral updates
-delassus_type: "rigid_body"          # Format of the Delassus matrix ("dense", "cholesky", "rigid_body")
+delassus_type: "cholesky"          # Format of the Delassus matrix ("dense", "cholesky", "rigid_body")
 max_delassus_decomposition_updates: 100000 # Stop updating Delassus factorization after this many steps
 dual_momentum: 0.0                   # Dual momentum factor in [0, 1] (0 = disabled)
 rho_momentum: 0.0                    # Momentum for rho updates [0, 1]

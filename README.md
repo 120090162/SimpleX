@@ -175,6 +175,7 @@ python examples/double_pendulum_fwddyn.py plot
 
 # go2 sim demo
 python demo/go2_sim.py
+python demo/go2_sim.py --robot_path="unitree_go2/mjcf/go2.xml"
 ```
 
 # 测试指令

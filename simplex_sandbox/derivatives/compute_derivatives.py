@@ -7,6 +7,7 @@ from contact_frame_derivatives import (
 )
 import simplex
 import hppfcl
+
 # import pydiffcoal as dcoal
 
 np.set_printoptions(suppress=True)
@@ -31,7 +32,7 @@ def __computePrimalDualCollisionCorrection(sim: simplex.SimulatorX, v: np.ndarra
     nc = 0  # count number of contact points; by the end, there should be as many as in the contact problem.
     for i in range(len(sim.constraint_problem.pairs_in_collision)):
         col_pair: int = sim.constraint_problem.pairs_in_collision[i]
-        contact_mapper: simpl额x.ContactMapper = sim.constraint_problem.contact_mappers[
+        contact_mapper: simplex.ContactMapper = sim.constraint_problem.contact_mappers[
             col_pair
         ]
         for j in range(contact_mapper.count):
@@ -281,15 +282,12 @@ def computeStepDerivatives(sim, q, v, tau, fext, dt):
             )
 
         dlam_dtheta = computeNCPDerivatives(sim, dGlamgdtheta)
-        MinvJT = (
-            sim.constraint_problem.constraint_cholesky_decomposition.getInverseMassMatrix()
-            @ (
-                (
-                    sim.constraint_problem.constraint_cholesky_decomposition.matrix()[
-                        : 3 * nc, -sim.model.nv :
-                    ]
-                ).transpose()
-            )
+        MinvJT = sim.constraint_problem.constraint_cholesky_decomposition.getInverseMassMatrix() @ (
+            (
+                sim.constraint_problem.constraint_cholesky_decomposition.matrix()[
+                    : 3 * nc, -sim.model.nv :
+                ]
+            ).transpose()
         )
         dlamdq = dlam_dtheta[:, : sim.model.nv]
         dlamdv = dlam_dtheta[:, sim.model.nv : sim.model.nv * 2]

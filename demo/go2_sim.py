@@ -69,6 +69,7 @@ class MPC_Sim:
         self.is_running = True
 
         self.simplex_sim = None
+        self.simplex_dsim = None
         self.solver = None
         self.solver_type = None
         self.q0 = None
@@ -163,9 +164,10 @@ class MPC_Sim:
             self.sim_args.damping,
         )
 
-        # Simulation setup
+        # Simulation setup and get derivatives
         self.simplex_sim = simplex.SimulatorX(self.pin_model, self.collision_model)
         setup_simplex_simulator(self.simplex_sim, self.sim_args)
+        self.simplex_dsim = simplex.SimulatorDerivatives(self.simplex_sim)
         self.simplex_sim.reset()
 
         if self.sim_args.contact_solver == "admm":
@@ -241,6 +243,14 @@ class MPC_Sim:
             if step_counter % render_substeps == 0:
                 self.viz.display(qnext)
 
+                self.simplex_dsim.stepDerivatives(
+                    self.simplex_sim, q, v, zero_torque, self.sim_args.dt
+                )
+                # print(
+                #     LOGGER.DEBUG
+                #     + f"Contact count: {self.simplex_sim.workspace.constraint_problem.getNumberOfContacts()}"
+                # )
+
             self.qs.append(qnext)
             self.vs.append(vnext)
 
@@ -274,7 +284,7 @@ class MPC_Sim:
 
 
 def main(argv):
-    del argv  # Unused.
+    # del argv  # Unused.
 
     mujoco_model_path = _ASSETS_DIR / f"{_XML_PATH.value}"
     pin_model_path = _ASSETS_DIR / f"{_ROBOT_PATH.value}"  # 可是使用简化模型方便仿真
@@ -290,10 +300,15 @@ def main(argv):
         raise FileNotFoundError(f"Sim config file not found: {config_path}")
 
     sim = MPC_Sim(
-        mujoco_model_path, pin_model_path, SimulationArgs().parse_args(), config_path
+        mujoco_model_path,
+        pin_model_path,
+        SimulationArgs().parse_args(args=argv[1:]),  # 解析命令行参数并覆盖默认值
+        config_path,
     )
     sim.run()
 
 
 if __name__ == "__main__":
-    app.run(main)
+    app.run(
+        main, flags_parser=lambda a: flags.FLAGS(a, known_only=True)
+    )  # 允许传递未定义的命令行参数（如 --sim_arg=value）给 SimulationArgs 解析
