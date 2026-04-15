@@ -5,15 +5,17 @@ Xcode*
 **/.ipynb_checkpoints
 coverage*
 .travis
-.vscode*
+.vscode-server/
 *.orig
 .cache
 
 build/
-.vscode/
 *.log
 
 *.egg-info/
 output/
 third_party/crocoddyl/
 third_party/ContactBench/
+
+AGENTS.md
+.github/

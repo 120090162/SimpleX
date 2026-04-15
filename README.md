@@ -164,8 +164,13 @@ cmake .. \
 make -j4
 make install
 # 测试crocoddyl安装是否正确
-cd ..
-python examples/double_pendulum_fwddyn.py plot
+cd ../../..
+# test double pendulum
+python examples/double_pendulum_fwddyn.py display
+# test quadrupedal fwd
+python examples/quadrupedal_gaits_fwddyn.py display
+# test quadrupedal inv
+python examples/quadrupedal_gaits_invdyn.py display
 
 # 测试flip demo
 
