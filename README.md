@@ -175,7 +175,7 @@ python examples/quadrupedal_gaits_invdyn.py display
 # 测试flip demo
 
 # 测试walk demo
-
+python demo/simplex_sim.py --robot_path="unitree_go2/mjcf/go2.xml"
 # 测试tolerant demo
 
 # go2 sim demo
