@@ -236,6 +236,7 @@ class MPC_Sim:
             q = self.qs[step_counter]
             v = self.vs[step_counter]
             self.simplex_sim.step(q, v, zero_torque, self.sim_args.dt, self.solver_type)
+            # self.simplex_sim.step(q, v, zero_torque, 0.025, self.solver_type)
 
             qnext = self.simplex_sim.state.qnew.copy()
             vnext = self.simplex_sim.state.vnew.copy()
