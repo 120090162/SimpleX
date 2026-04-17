@@ -341,3 +341,38 @@ def setup_simplex_simulator(sim: simplex.SimulatorX, args: SimulationArgs):
 
     for patch_req in sim.geom_data.contactPatchRequests:
         patch_req.setPatchTolerance(args.patch_tolerance)
+
+
+def find_quadruped_foot_frame_ids(pin_model: pin.Model):
+    """Find FL/FR/RL/RR foot frame ids in a deterministic order.
+
+    For Unitree-style MJCFs, Pinocchio usually exposes both ``*_foot_fixed``
+    and ``*_foot`` frames. This function prefers ``*_foot`` body frames to
+    avoid selecting fixed-joint helper frames.
+
+    Args:
+        pin_model: Pinocchio model built from robot MJCF/URDF.
+
+    Returns:
+        A list of frame ids ordered as ``[FL, FR, RL, RR]`` when available.
+        If canonical names are not found, returns best-effort ``*_foot`` matches.
+    """
+    preferred_names = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
+    frame_id_by_name = {frame.name: i for i, frame in enumerate(pin_model.frames)}
+
+    if all(name in frame_id_by_name for name in preferred_names):
+        return [frame_id_by_name[name] for name in preferred_names]
+
+    foot_ids = []
+    for i, frame in enumerate(pin_model.frames):
+        n = frame.name.lower()
+        if n.endswith("_foot") and not n.endswith("_foot_fixed"):
+            foot_ids.append(i)
+
+    if foot_ids:
+        return foot_ids[:4]
+
+    # Final fallback for unusual model naming.
+    return [
+        i for i, frame in enumerate(pin_model.frames) if "foot" in frame.name.lower()
+    ][:4]

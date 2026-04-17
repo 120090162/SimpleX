@@ -9,7 +9,18 @@ from line_profiler import profile
 # 存robot/cost/actuation模型和中间变量用的
 # model对应的data
 class DAD_contact(crocoddyl.DifferentialActionDataAbstract):
+    """Data container for :class:`DAM_contact`.
+
+    This object keeps per-step Pinocchio, actuation, and cost data that are
+    reused during ``calc``/``calcDiff``.
+    """
+
     def __init__(self, model):
+        """Initialize data buffers associated with one DAM instance.
+
+        Args:
+            model: The :class:`DAM_contact` model creating this data.
+        """
         crocoddyl.DifferentialActionDataAbstract.__init__(self, model)
         self.pinocchio = pinocchio.Model.createData(model.state.pinocchio)
         self.multibody = crocoddyl.DataCollectorMultibody(self.pinocchio)
@@ -20,6 +31,13 @@ class DAD_contact(crocoddyl.DifferentialActionDataAbstract):
 
 # model
 class DAM_contact(crocoddyl.DifferentialActionModelAbstract):
+    """Differential action model using SimpleX contact dynamics.
+
+    The model computes continuous-time forward dynamics with contact through
+    ``simplex.SimulatorX`` and delegates objective evaluation to a Crocoddyl
+    ``CostModelSum``.
+    """
+
     def __init__(
         self,
         state,
@@ -30,6 +48,17 @@ class DAM_contact(crocoddyl.DifferentialActionModelAbstract):
         dt,
         solver_type=simplex.ConstraintSolverType.CLARABEL,
     ):
+        """Build a contact-aware differential action model.
+
+        Args:
+            state: Crocoddyl multibody state model.
+            actuationModel: Crocoddyl actuation model.
+            costModel: Running/terminal cost model.
+            simulator: ``simplex.SimulatorX`` used for forward stepping.
+            dsimulator: ``simplex.SimulatorDerivatives`` for dynamics Jacobians.
+            dt: Integration step used inside dynamics evaluation.
+            solver_type: Contact solver backend used by SimpleX.
+        """
         crocoddyl.DifferentialActionModelAbstract.__init__(
             self, state, actuationModel.nu, costModel.nr
         )
@@ -42,6 +71,13 @@ class DAM_contact(crocoddyl.DifferentialActionModelAbstract):
 
     @profile
     def calc(self, data, x, u=None):
+        """Compute dynamics output and stage cost.
+
+        Args:
+            data: Data created by :meth:`createData`.
+            x: State vector ``[q, v]``.
+            u: Control vector. If ``None``, only terminal-style cost is computed.
+        """
         q, v = x[: self.state.nq], x[-self.state.nv :]
         if u is None:  # 最后那一步N默认u=None
             # [TODO] 这行不一定有用，后续可以为了运行速度删掉
@@ -66,6 +102,13 @@ class DAM_contact(crocoddyl.DifferentialActionModelAbstract):
 
     @profile
     def calcDiff(self, data, x, u=None):
+        """Compute derivatives of dynamics and cost.
+
+        Args:
+            data: Data created by :meth:`createData`.
+            x: State vector ``[q, v]``.
+            u: Control vector. If ``None``, only cost derivatives are computed.
+        """
         if u is None:
             self.costs.calcDiff(data.costs, x)
         else:
@@ -92,6 +135,7 @@ class DAM_contact(crocoddyl.DifferentialActionModelAbstract):
             self.costs.calcDiff(data.costs, x, u)
 
     def createData(self):
+        """Create and return the model-specific data object."""
         data = DAD_contact(self)
         return data
 
@@ -107,6 +151,22 @@ def IAM_shoot(
     DT,
     solver_type=simplex.ConstraintSolverType.CLARABEL,
 ):
+    """Create a Crocoddyl shooting rollout from this differential model.
+
+    Args:
+        N: Number of running nodes (must be > 1).
+        state: Crocoddyl state model.
+        actuation: Crocoddyl actuation model.
+        costs: ``[running_cost, terminal_cost]`` pair.
+        simulator: ``simplex.SimulatorX`` instance.
+        dsimulator: ``simplex.SimulatorDerivatives`` instance.
+        DT: Running node integration step.
+        solver_type: Contact solver backend used by SimpleX.
+
+    Returns:
+        List of integrated action models with ``N`` running nodes and one
+        terminal node.
+    """
     assert N > 1
     # running cost for the first N-1 steps, terminal cost for the last step
     dmodelr = DAM_contact(
