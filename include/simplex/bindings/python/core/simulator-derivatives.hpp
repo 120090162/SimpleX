@@ -32,6 +32,9 @@ namespace simplex
                     .def_readonly("dvnew_dq", &Self::dvnew_dq, "Jacobian of the velocity wrt q.")
                     .def_readonly("dvnew_dv", &Self::dvnew_dv, "Jacobian of the velocity wrt v.")
                     .def_readonly("dvnew_dtau", &Self::dvnew_dtau, "Jacobian of the velocity wrt tau.")
+                    .def_readonly("danew_dq", &Self::danew_dq, "Jacobian of the acceleration wrt q.")
+                    .def_readonly("danew_dv", &Self::danew_dv, "Jacobian of the acceleration wrt v.")
+                    .def_readonly("danew_dtau", &Self::danew_dtau, "Jacobian of the acceleration wrt tau.")
                     .def_readonly("contact_solver_derivatives", &Self::contact_solver_derivatives, "Contact solver derivatives.")
 
                     .def(

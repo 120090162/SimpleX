@@ -69,16 +69,16 @@ class DAM_contact(crocoddyl.DifferentialActionModelAbstract):
         if u is None:
             self.costs.calcDiff(data.costs, x)
         else:
-            nq, nv = self.state.nq, self.state.nv
-            q, v = x[:nq], x[-nv:]
-
+            q, v = x[: self.state.nq], x[-self.state.nv :]
             # Computing the actuation derivatives
             self.actuation.calcDiff(data.actuation, x, u)
             tau = data.actuation.tau
 
             # 使用SimulatorDerivatives计算物理导数
             # tau = B @ u
-            self.dsimulator.stepDerivatives(self.simulator, q, v, tau, self.dt)
+            self.dsimulator.stepDerivatives(
+                self.simulator, q.copy(), v.copy(), tau.copy(), self.dt
+            )
 
             # ddq_dq = da_dq + da_dtau @ dtau_dq
             # ddq_dv = da_dv + da_dtau @ dtau_dv
@@ -129,16 +129,24 @@ if __name__ == "__main__":
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
 
-    from utils.params import _ASSETS_DIR, BLACK
+    from utils.params import _ASSETS_DIR, BLACK, _CONFIGS_DIR
     from utils.sim_utils import (
-        SimulationArgs,
         add_system_collision_pairs,
         add_material_and_compliance,
         remove_BVH_models,
         setup_joint_constraints,
         setup_simplex_simulator,
+        read_sim_config,
+        SimulationArgs,
     )
     from utils.viz_utils import add_floor
+
+    args = SimulationArgs()
+    sim_args = read_sim_config(
+        args, f"{_CONFIGS_DIR}/go2_sim_config.yaml", is_show=False
+    )
+    np.random.seed(sim_args.seed)
+    pinocchio.seed(sim_args.seed)
 
     print("[models.py] build local Pinocchio + SimpleX simulator demo")
     model_path = _ASSETS_DIR / "unitree_go2/go2.xml"
@@ -153,11 +161,7 @@ if __name__ == "__main__":
     visual_model = pinocchio.buildGeomFromMJCF(
         pin_model, model_path.as_posix(), pinocchio.GeometryType.VISUAL
     )
-    q0 = (
-        pin_model.referenceConfigurations["home"]
-        if "home" in pin_model.referenceConfigurations
-        else pinocchio.neutral(pin_model)
-    )
+    q0 = pin_model.referenceConfigurations["home"]
     v0 = np.zeros(pin_model.nv)
     print(f"Loaded model: nq={pin_model.nq}, nv={pin_model.nv}")
 
@@ -171,8 +175,6 @@ if __name__ == "__main__":
     )
 
     sim = simplex.SimulatorX(pin_model, collision_model)
-    sim_args = SimulationArgs()
-    sim_args.process_args()
     setup_simplex_simulator(sim, sim_args)
     dsim = simplex.SimulatorDerivatives(sim)
     sim.reset()
@@ -209,7 +211,6 @@ if __name__ == "__main__":
     print(
         f"DAM_contact done: cost={dad.cost:.6f}, Fx={dad.Fx.shape}, Fu={dad.Fu.shape}, xout={dad.xout.shape}"
     )
-    print(f"DAD_contact type: {type(dad).__name__}")
 
     # 4) IAM_shoot 示例
     horizon = 5
