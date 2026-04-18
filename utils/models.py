@@ -125,10 +125,13 @@ class DAM_contact(crocoddyl.DifferentialActionModelAbstract):
 
             # ddq_dq = da_dq + da_dtau @ dtau_dq
             # ddq_dv = da_dv + da_dtau @ dtau_dv
-            data.Fx[:, :] = (
-                np.hstack([self.dsimulator.danew_dq, self.dsimulator.danew_dv])
-                + self.dsimulator.danew_dtau @ data.actuation.dtau_dx
+            data.Fx[:, :] = np.hstack(
+                [self.dsimulator.danew_dq, self.dsimulator.danew_dv]
             )
+            # data.Fx[:, :] = (
+            #     np.hstack([self.dsimulator.danew_dq, self.dsimulator.danew_dv])
+            #     + self.dsimulator.danew_dtau @ data.actuation.dtau_dx
+            # )
             # ddq_du = da_dtau @ dtau_du
             data.Fu[:, :] = self.dsimulator.danew_dtau @ data.actuation.dtau_du
             # Computing the cost derivatives

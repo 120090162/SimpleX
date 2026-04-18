@@ -63,7 +63,7 @@ class TrotCIMPC:
         q_nominal: np.ndarray | None = None,
     ) -> None:
         self.pin_model = pin_model
-        self.state = crocoddyl.StateMultibody(pin_model)
+        self.state = crocoddyl.StateMultibody(pin_model.copy())
         self.actuation = crocoddyl.ActuationModelFloatingBase(self.state)
         self.simulator = simulator
         self.dsimulator = dsimulator
@@ -146,6 +146,9 @@ class TrotCIMPC:
 
         self._solver = solver
         self._last_u_ff = np.asarray(solver.us[0]).copy()
+        print(
+            f"solver us: {[np.asarray(u) for u in solver.us]}"
+        )  # Debug print for feed-forward torques
         self._last_x_des = (
             np.asarray(solver.xs[1]).copy()
             if len(solver.xs) > 1
@@ -228,6 +231,7 @@ class TrotCIMPC:
         xs = [np.asarray(x).copy() for x in self._solver.xs[1:]]
         xs.append(np.asarray(self._solver.xs[-1]).copy())
         us = [np.asarray(u).copy() for u in self._solver.us[1:]]
+
         us.append(np.zeros(self.actuation.nu))
 
         xs[0] = x_measured.copy()
@@ -251,8 +255,8 @@ class TrotCIMPC:
 
         kp = self._expand_gain(self.config.kp)
         kd = self._expand_gain(self.config.kd)
-        ptarget = u_ff / kp + q_des_j
-        return kp * (ptarget - q_meas_j) + kd * (v_des_j - v_meas_j)
+
+        return u_ff + kp * (q_des_j - q_meas_j) + kd * (v_des_j - v_meas_j)
 
     def _expand_gain(self, gain: float | np.ndarray) -> np.ndarray:
         if np.isscalar(gain):

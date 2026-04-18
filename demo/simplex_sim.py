@@ -49,6 +49,13 @@ _CONFIG_PATH = flags.DEFINE_string(
 )
 
 
+def _mujoco_q_to_pinocchio_q(q_mj: np.ndarray) -> np.ndarray:
+    """Convert base quaternion from MuJoCo (wxyz) to Pinocchio (xyzw)."""
+    q_pin = q_mj.copy()
+    q_pin[3:7] = np.array([q_mj[4], q_mj[5], q_mj[6], q_mj[3]])
+    return q_pin
+
+
 class MPC_Sim:
     def __init__(
         self,
@@ -203,12 +210,13 @@ class MPC_Sim:
             self.solver_type,
             TrotCIMPCConfig(
                 horizon=20,
+                # ocp_dt=1e-3,
                 ocp_dt=2.5e-2,
-                mpc_hz=40.0,
+                mpc_hz=50.0,
                 maxiter=4,
                 is_feasible=False,
                 init_reg=0.1,
-                kp=40.0,
+                kp=80.0,
                 kd=1.0,
                 enable_air_time_cost=True,
                 air_eps=3e-2,
@@ -216,9 +224,16 @@ class MPC_Sim:
             ),
             q_nominal=self.q0,
         )
-        self.cimpc.set_velocity_command(v_des=0.3, w_des=0.0)
+        self.cimpc.set_velocity_command(v_des=100.0, w_des=10.0)
         self.latest_x = pack_state(self.q0, self.v0)
         self.latest_u = np.zeros(self.cimpc.actuation.nu)
+        if self.cimpc.actuation.nu != self.mujoco_data.ctrl.shape[0]:
+            raise RuntimeError(
+                LOGGER.ERROR
+                + "Control dimension mismatch: "
+                + f"cimpc nu={self.cimpc.actuation.nu}, mujoco ctrl={self.mujoco_data.ctrl.shape[0]}. "
+                + "Please ensure MJCF floating base is declared as root_joint."
+            )
 
         print(
             LOGGER.INFO
@@ -245,9 +260,8 @@ class MPC_Sim:
                 mujoco.mj_step(self.mujoco_model, self.mujoco_data)
 
                 # Read back measured state and update high-rate command (PD + FF).
-                x_measured = pack_state(
-                    self.mujoco_data.qpos.copy(), self.mujoco_data.qvel.copy()
-                )
+                q_pin = _mujoco_q_to_pinocchio_q(self.mujoco_data.qpos.copy())
+                x_measured = pack_state(q_pin, self.mujoco_data.qvel.copy())
                 with self.control_lock:
                     self.latest_x = x_measured
                     self.latest_u = self.cimpc.compute_command(x_measured)
@@ -290,10 +304,11 @@ class MPC_Sim:
 
             if step_counter % render_substeps == 0:
                 self.viz.display(qnow)
-                print(
-                    LOGGER.DEBUG
-                    + f"MPC solved={info['solved']}, |u_ff|={np.linalg.norm(info['u_ff']):.4f}"
-                )
+                # print(
+                #     LOGGER.DEBUG
+                #     + f"MPC solved={info['solved']}, |u_ff|={np.linalg.norm(info['u_ff']):.4f}"
+                # )
+                print(LOGGER.DEBUG + f"u_ff: {info['u_ff']}")
 
             self.qs.append(qnow.copy())
             self.vs.append(vnow.copy())

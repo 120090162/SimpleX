@@ -59,7 +59,7 @@
     <body name="base" pos="0.00000000 0.00000000 0.42600000" quat="1 0 0 0" childclass="robot">
       <inertial pos="0.021112 0 -0.005366" quat="-0.000543471 0.713435 -0.00173769 0.700719" mass="6.921"
         diaginertia="0.107027 0.0980771 0.0244531"/>
-      <freejoint name="floating_base" />
+      <freejoint name="root_joint" />
       <geom name="base_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="base_convex.stl" class="collision" />
       <geom mesh="base_0" material="black" class="visual"/>
       <geom mesh="base_1" material="black" class="visual"/>

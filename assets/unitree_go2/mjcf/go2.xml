@@ -3,7 +3,7 @@
   <worldbody>
     <body name="base">
       <inertial pos="0.021112 0 -0.005366" quat="-0.000543471 0.713435 -0.00173769 0.700719" mass="6.921" diaginertia="0.107027 0.0980771 0.0244531"/>
-      <joint name="floating_base_joint" type="free" limited="false" actuatorfrclimited="false"/>
+      <joint name="root_joint" type="free" limited="false" actuatorfrclimited="false"/>
       <geom size="0.1881 0.04675 0.057" type="box" rgba="1 1 1 1"/>
       <body name="Head_upper" pos="0.285 0 0.01">
         <inertial pos="0 0 0" mass="0.001" diaginertia="9.6e-06 9.6e-06 9.6e-06"/>
